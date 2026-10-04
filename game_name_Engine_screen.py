@@ -13,13 +13,7 @@ from kivy.clock import Clock
 from kivy.core.text import Label as KivyLabel
 
 
-if using_kivy:
-    ScreenManager = KivyScreenManager
-    FontManager = KivyFontManager
 
-else:
-    ScreenManager = screen_manager
-    FontManager = font_manager
 
 
 # =====================================================================================================================
@@ -163,12 +157,15 @@ class font_manager:
 # endregion
 
 
+# =====================================================================================================================
 
+if using_kivy:
+    ScreenManager = KivyScreenManager
+    FontManager = KivyFontManager
 
-
-
-
-
+else:
+    ScreenManager = screen_manager
+    FontManager = font_manager
 
 
 

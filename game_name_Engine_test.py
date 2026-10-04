@@ -4,7 +4,14 @@
 import pygame as pg
 from game_name_Engine_screen import screen_manager, font_manager
 
+from kivy.app import App
+from kivy.uix.label import Label
 
+class Main(App):
+    def build(self):
+        return Label(text="Hello, world!")
+
+Main().run()
 
 
 sm = screen_manager(width=900, height=700, resizable=True, caption="Engine Demo")
