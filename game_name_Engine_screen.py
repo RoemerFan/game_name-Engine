@@ -1,16 +1,19 @@
-import pygame as pg
 
-try:
-    import kivy
-    using_kivy = True
-except ImportError:
-    using_kivy = False
 
-from kivy.core.window import Window
-from kivy.graphics import Rectangle, Color
-from kivy.uix.widget import Widget
-from kivy.clock import Clock
-from kivy.core.text import Label as KivyLabel
+
+from game_name_Engine_masterswitch import using_kivy
+
+if using_kivy:
+    from kivy.core.window import Window
+    from kivy.graphics import Rectangle, Color
+    from kivy.uix.widget import Widget
+    from kivy.clock import Clock
+    from kivy.core.text import Label as KivyLabel
+    from kivy.uix.label import Label
+
+else:
+    import pygame as pg
+
 
 
 
@@ -19,11 +22,21 @@ from kivy.core.text import Label as KivyLabel
 # =====================================================================================================================
 
 class KivyScreenManager(Widget):
-    def __init__(self, width=1280, height=720, caption="game_name_Engine", **kwargs):
+    def __init__(self, width=1280, height=720, resizable=True, fullscreen=False, caption="game_name_Engine",
+                 min_width=640, min_height=480, **kwargs):
+
         super().__init__(**kwargs)
 
+        self.resizable = resizable
+        self.min_width = min_width
+        self.min_height = min_height
+
+        if fullscreen:
+            from kivy.core.window import Window as _W
+            width, height = _W.system_size
+
         Window.size = (width, height)
-        self.width = self.height = Window.size
+        self.width, self.height = Window.size
 
         Clock.schedule_interval(self.update, 1/60)
 
@@ -33,9 +46,12 @@ class KivyScreenManager(Widget):
     @property
     def size(self):
         return self.width, self.height
+
     @property
     def center(self):
         return self.width // 2, self.height // 2
+
+
 
 
 # =====================================================================================================================
@@ -101,20 +117,21 @@ class KivyFontManager:
     def __init__(self, screen_manager):
         self.screen_manager = screen_manager
         self.fonts = {
-                      "font": None,
+                      "font": "Arial",
                       }
 
     def add(self, name, path):
         self.fonts[name] = path
 
     def scaled_size(self, fraction, min_size=10):
-        return max(int(self.screen_manager.height * fraction), min_size)
+        return max(int(Window.height * fraction), min_size)
 
-    def get(self, name="font", fraction=0.05, min_size=10):
-        size = self.scaled_size(fraction, min_size)
-        path = self.fonts.get(name)
+    def get(self, name="font"):
 
-        return KivyLabel(font_size=size, font_name=path)
+        return self.fonts.get(name, "Arial")
+
+        if not path:
+            path = "Arial"
 
 
 # =====================================================================================================================
@@ -126,7 +143,7 @@ class font_manager:
         self.screen_manager = screen_manager
 
         self.fonts = {
-                      "font": None,
+                      "font": "Arial",
                       }
 
     def add(self, name, path):
