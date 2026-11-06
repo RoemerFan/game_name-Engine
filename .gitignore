@@ -1,0 +1,53 @@
+# Unity: Ordner, die Unity selbst erzeugt (nicht hochladen)
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+
+# Von Unity erzeugte Zusatzdateien
+*.log
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+sysinfo.txt
+crashlytics-build.properties
+
+# Visual Studio / Rider / VS Code (werden von Unity neu erzeugt)
+/.vs/
+/.idea/
+/.vscode/
+/.gradle/
+ExportedObj/
+.consulo/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Fertige Spielversionen
+*.apk
+*.aab
+*.unitypackage
+*.app
+
+# Betriebssystem
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Wichtig: .meta-Dateien MUESSEN mit hochgeladen werden, daher stehen sie NICHT hier.

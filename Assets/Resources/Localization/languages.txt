@@ -1,0 +1,5 @@
+# Liste der Sprachen: Sprachcode=Anzeigename
+# Fuer eine neue Sprache: Datei <code>.txt in diesem Ordner anlegen (am besten
+# de.txt kopieren und die rechte Seite uebersetzen) und hier eine Zeile ergaenzen.
+de=Deutsch
+en=English

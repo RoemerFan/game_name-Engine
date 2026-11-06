@@ -1,0 +1,299 @@
+# English texts. Format:  key=text
+#  - {0}, {1} ... are placeholders for values (do not change, only move)
+#  - \n is a line break
+#  - Lines starting with # are comments
+
+# ---------- General ----------
+common.on=ON
+common.off=OFF
+medium.water=Water
+medium.steam=Steam
+medium.soot=Soot
+medium.power=Power
+port.input=Input
+port.output=Output
+port.both=Plug (in/out)
+port.occupied=in use
+port.free=free
+
+# ---------- Default labels ----------
+switch.label=Switch
+fuse.label=Fuse
+meter.label=Power meter
+inline.label=Distributor
+
+# ---------- Machine names (prefab name -> display name) ----------
+machine.Boiler=Steam boiler
+machine.SteamGenerator=Steam generator
+machine.WaterPump=Water pump
+machine.Wheelbarrow=Wheelbarrow
+machine.SmallDieselGenerator=Small diesel generator
+machine.Truck=Truck
+
+# ---------- Boiler ----------
+boiler.status.off=OFF
+boiler.status.dry=DRY!
+boiler.status.venting=Valve venting
+boiler.status.burning=Burning
+boiler.status.idle=Off
+boiler.info=Boiler: {0}\nCoal: {1}/{2}\nWater: {3}/{4}\nSteam: {5}/{6} ({7} %)\nSoot: {8}/{9}\nFire: {10} % ({11})
+
+# ---------- Steam generator ----------
+steamgen.status.decoupled=OFF (disconnected)
+steamgen.status.shortage=Steam shortage!
+steamgen.status.running=Running
+steamgen.status.spinup=Spinning up
+steamgen.status.stopped=Stopped
+steamgen.info=Generator: {0}\nSteam: {1}/{2}\nSpeed: {3} rpm ({4} Hz)\nOutput: {5} / {6} kW\nRequested: {7} kW
+
+# ---------- Diesel generator ----------
+diesel.prompt.running=Diesel generator: running - switch engine off
+diesel.prompt.pull=Diesel generator: pull the starter cord ({0}/{1})
+diesel.prompt.empty=Diesel generator: tank empty - turn the hand crank
+diesel.status.decoupled=OFF (disconnected)
+diesel.status.engine=Engine running
+diesel.status.crank=Hand crank
+diesel.status.coast=Winding down
+diesel.status.stopped=Stopped
+diesel.info=Diesel generator: {0}\nDiesel: {1}/{2} l\nSpeed: {3} rpm ({4} Hz)\nOutput: {5} / {6} kW
+
+# ---------- Generator controls ----------
+control.nogenerator=Control without generator
+control.pull.running=Starter cord (engine already running)
+control.pull.empty=Starter cord (tank empty)
+control.pull.ready=Pull starter cord ({0}/{1})
+control.crank.running=Hand crank (engine running)
+control.crank.ready=Turn hand crank
+control.stop.running=Switch engine off
+control.stop.off=Engine is off
+
+# ---------- Distributor / meter ----------
+inline.status.closed=CLOSED
+inline.status.throttled=throttled {0} %
+inline.status.open=open
+inline.info={0}: {1}\nMedium: {2}\nFlow: {3} / s\nTotal: {4}\nContent: {5} / {6}
+
+# ---------- Power meter ----------
+meter.info={0}\nPower: {1} kW\nTotal: {2} kWh
+
+# ---------- Fuse ----------
+fuse.handle.tripped=TRIPPED - reset
+fuse.handle.load={0} / {1} kW
+fuse.status.tripped=TRIPPED
+fuse.status.off=OFF
+fuse.status.on=ON
+fuse.info=Fuse: {0}\nLoad: {1} / {2} kW\nHeating: {3} %
+
+# ---------- Pump ----------
+pump.status.off=OFF
+pump.status.nopower=No power
+pump.status.pumping=Pumping
+pump.status.ready=Ready
+pump.info=Pump: {0}\nSupply: {1} %\nBuffer: {2}/{3}\nDemand: {4} kW
+
+# ---------- Power grid ----------
+grid.status.nogenerator=No generator
+grid.status.blackout=BLACKOUT - restarting
+grid.status.nopower=No power
+grid.status.shedding=Load shedding active
+grid.status.underpowered=Undersupply
+grid.status.ok=OK
+grid.hud.title=POWER GRID   [{0}] switch view
+grid.hud.net=Grid {0}: {1}
+grid.hud.values=   Generation {0} kW  |  Load {1} kW  |  {2} Hz
+grid.hud.none=No grid available
+
+# ---------- Pipe mode ----------
+pipe.hint=PIPE MODE   [{0}] exit   [<secondary>] cancel   [{1}] remove pipe
+pipe.hint.first=Aim at the first connection and click
+pipe.hint.second=Aim at the second connection and click
+pipe.port.power={0} ({1})
+pipe.port.cable={0} - cable {1} / {2} kW
+pipe.port.flow={0} – {1} ({2})
+
+# ---------- Switch ----------
+switch.prompt={0}: {1}
+
+# ---------- Build menu ----------
+build.title=BUILD MENU
+build.tools=TOOLS
+build.machines=MACHINES
+build.demolish=Demolish
+build.move=Move
+build.hint.demolish=DEMOLISH MODE   [<primary>] demolish machine   [<secondary>] exit
+build.hint.moveselect=MOVE   [<primary>] pick up machine   [<secondary>] exit
+build.hint.movecarry=MOVE   [<primary>] place   [<rotl>/<rotr>] rotate   [<secondary>] cancel\nConnected pipes are removed when placing.
+build.target=Target: {0}
+
+# ---------- Settings ----------
+settings.title=SETTINGS
+settings.textsize=Text size: {0} %
+settings.small=Small
+settings.medium=Medium
+settings.large=Large
+settings.xlarge=Extra large
+settings.preview=Preview:
+settings.preview.text=Boiler: Burning\nCoal: 4/10\nWater: 80.0/100
+settings.language=Language
+settings.reset=Reset
+settings.close=Close
+
+# ---------- World ----------
+world.loading=Generating world ... {0} %
+
+# ---------- Fire control ----------
+boiler.fire.auto=Auto
+boiler.fire.manual=Manual
+damper.prompt.auto=Fire control: Automatic (fire {0} %) - change setting
+damper.prompt.manual=Fire control: {0} % - change setting
+
+# ---------- Grid monitor ----------
+grid.hud.counts={0} generators, {1} consumers
+grid.hud.events=Events
+grid.hud.noevents=No events
+grid.hud.eventline={0} s ago: {1}
+grid.chart.power=Power (last minute)
+grid.chart.load=Load
+grid.chart.gen=Generation
+grid.chart.freq=Frequency
+grid.event.shed=Load shedding: {0} switched off ({1} Hz)
+grid.event.blackout=BLACKOUT! Frequency dropped to {0} Hz
+grid.event.fuse=Fuse tripped: {0} ({1} kW at {2} kW)
+grid.event.cable=Cable burnt out ({0} kW at {1} kW)
+grid.status.battery=Island mode (battery)
+grid.hud.storage=   Battery x{0}: {1}/{2} kWh ({3} %)  |  {4} kW
+machine.Battery=Battery
+battery.status.off=Off
+battery.status.overheat=OVERHEATED
+battery.status.discharging=Discharging
+battery.status.charging=Charging
+battery.status.island=Island mode
+battery.status.idle=Ready
+battery.info=Battery: {0}\nCharge: {1} / {2} kWh ({3} %)\nPower: {4} kW\nTemperature: {5} °C\nHealth: {6} %
+save.page.settings=Settings
+save.page.saves=Save games
+save.slot.auto=Autosave
+save.slot.quick=Quicksave (F5 save / F9 load)
+save.slot.n=Save game {0}
+save.empty=- empty -
+save.info={0}  |  Play time {1}  |  {2} machines
+save.button.save=Save
+save.button.load=Load
+save.saved=Saved: {0}
+save.loaded=Loaded: {0}
+save.loading=Loading save game ...
+save.error.save=Saving failed
+save.error.load=Loading failed: {0}
+save.error.world=This save belongs to a different world (seed or size).
+save.error.missing=No save game found
+
+# ---------- Input ----------
+input.mouse.left=Left click
+input.mouse.right=Right click
+pad.cross=Cross
+pad.circle=Circle
+pad.square=Square
+pad.triangle=Triangle
+pad.dpad.up=D-pad up
+pad.dpad.down=D-pad down
+pad.dpad.left=D-pad left
+pad.dpad.right=D-pad right
+# ---------- Multiplayer ----------
+net.page=Multiplayer
+net.name=Your name
+net.port=Port
+net.host=Host game
+net.join=Join
+net.address=Host address (IP)
+net.disconnect=Disconnect
+net.players=Players:
+net.you=(you)
+net.addresses=Addresses of this PC: {0}
+net.hint.lan=On the same network, the other player enters the host's address. Over the internet the host must forward the port on the router, or you use a VPN (e.g. Tailscale or ZeroTier). Both need the same world settings (seed, size).
+net.status.offline=Not connected (single player)
+net.status.host=Host: {0} players, port {1}
+net.status.client=Connected to {0}
+net.status.connecting=Connecting to {0} ...
+net.status.loading=Loading world from host ...
+net.joined={0} joined the game
+net.left={0} left the game
+net.error.version=The game versions do not match.
+net.error.world=The world does not match (different seed or size).
+net.error.full=The game is full.
+net.error.connect=Connection failed: {0}
+net.error.lost=Connection to the host lost.
+net.error.noload=Loading is not possible in multiplayer.
+net.error.client=Only the host can save.
+net.error.notready=The world has not finished loading yet.
+net.error.port=Invalid port (1024 to 65535).
+net.error.host=Could not start host: {0}
+medium.any=Universal
+port.universal=Universal (in/out)
+pipe.port.any=Universal port - takes on whatever is plugged in first ({0})
+junction.label=Universal junction
+junction.info.empty={0}: nothing plugged in yet
+junction.info.fluid={0}: {1} ({2} / {3})
+junction.info.power={0}: {1}
+furnace.status.broken=BROKEN
+furnace.status.tapping=Tapping
+furnace.status.frozen=Iron too cold to tap
+furnace.status.off=Blower off
+furnace.status.nopower=No power
+furnace.status.hearthfull=Hearth full (tap it)
+furnace.status.slagfull=Slag full (tap it)
+furnace.status.smelting=Smelting
+furnace.status.nocoal=No coal
+furnace.status.heating=Heating up
+furnace.status.noore=No ore
+furnace.status.ready=Ready
+furnace.info=Blast furnace: {0}\nTemperature: {1} °C - Blast: {2} %\nOre: {3}/{4} - Coal: {5}/{6}\nHearth: {7} {8} kg - slag {9} kg\nCooling water: {10} l - Wear: {11} %
+elevator.floor=Floor {0}
+elevator.prompt=Elevator to {0}   |   {1}
+elevator.status.idle=ready ({0})
+elevator.status.moving=moving to {0}
+elevator.status.nopower=no power
+elevator.status.overload=overloaded ({0} / {1} kg)
+conveyor.status.running=Running
+conveyor.status.off=OFF
+conveyor.status.nopower=No power
+conveyor.info=Conveyor belt: {0}\nSpeed: {1} m/s\nItems: {2}
+medium.melt=Molten metal
+metal.iron=Iron
+foundry.status.nopower=No power
+foundry.status.pouring=Pouring
+foundry.status.frozen=Frozen (needs heating)
+foundry.status.heating=Melting
+foundry.status.moldsfull=Molds occupied (take out the plates)
+foundry.status.cooling=Plates cooling
+foundry.status.ready=Ready
+foundry.status.empty=Empty
+foundry.info=Foundry: {0}\nMelt: {1} {2}/{3} kg - {4} °C\nMolds: {5}/{6} occupied
+ladder.prompt=[{0}]  Use ladder
+ladder.climbing=W/S or left stick: climb   |   [{0}] let go   |   [{1}] jump off
+mainmenu.start=Start game
+mainmenu.load=Load game
+mainmenu.multiplayer=Multiplayer
+mainmenu.settings=Settings
+mainmenu.quit=Quit
+mainmenu.back=Back
+mainmenu.loading=Loading save ...
+mainmenu.worldwait=Generating the world, one moment ...
+mainmenu.tomenu=Main menu
+save.delete=Delete
+save.delete.confirm1=Really delete?
+save.delete.confirm2=Delete permanently!
+save.deleted={0} was deleted
+build.backfill.on=ADAPT TERRAIN: ON   [{0}] turn off
+build.backfill.off=ADAPT TERRAIN: OFF   [{0}] turn on
+build.categories=CATEGORIES
+build.back=Back
+build.cat.power=Power & Light
+build.cat.production=Production
+build.cat.fluids=Water & Steam
+build.cat.transport=Transport
+build.cat.structures=Structures
+build.cat.other=Other
+port.cable.small=thin cable
+cart.grab=Grab wheelbarrow
+cart.release=Release wheelbarrow
+cart.load=Load: {0} / {1} kg

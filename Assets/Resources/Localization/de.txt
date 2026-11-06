@@ -1,0 +1,299 @@
+# Deutsche Texte. Format:  schluessel=Text
+#  - {0}, {1} ... sind Platzhalter fuer Werte (nicht aendern, nur verschieben)
+#  - \n ist ein Zeilenumbruch
+#  - Zeilen mit # am Anfang sind Kommentare
+
+# ---------- Allgemein ----------
+common.on=AN
+common.off=AUS
+medium.water=Wasser
+medium.steam=Dampf
+medium.soot=Ruß
+medium.power=Strom
+port.input=Eingang
+port.output=Ausgang
+port.both=Stecker (Ein-/Ausgang)
+port.occupied=belegt
+port.free=frei
+
+# ---------- Standard-Bezeichnungen ----------
+switch.label=Schalter
+fuse.label=Sicherung
+meter.label=Strommesser
+inline.label=Verteiler
+
+# ---------- Maschinen-Namen (Prefab-Name -> Anzeigename) ----------
+machine.Boiler=Dampfkessel
+machine.SteamGenerator=Dampfgenerator
+machine.WaterPump=Wasserpumpe
+machine.Wheelbarrow=Schubkarre
+machine.SmallDieselGenerator=Kleiner Diesel-Generator
+machine.Truck=Lastwagen
+
+# ---------- Kessel ----------
+boiler.status.off=AUS
+boiler.status.dry=TROCKEN!
+boiler.status.venting=Ventil bläst ab
+boiler.status.burning=Brennt
+boiler.status.idle=Aus
+boiler.info=Kessel: {0}\nKohle: {1}/{2}\nWasser: {3}/{4}\nDampf: {5}/{6} ({7} %)\nRuß: {8}/{9}\nFeuer: {10} % ({11})
+
+# ---------- Dampfgenerator ----------
+steamgen.status.decoupled=AUS (abgekoppelt)
+steamgen.status.shortage=Dampfmangel!
+steamgen.status.running=Läuft
+steamgen.status.spinup=Läuft an
+steamgen.status.stopped=Steht
+steamgen.info=Generator: {0}\nDampf: {1}/{2}\nDrehzahl: {3} U/min ({4} Hz)\nLeistung: {5} / {6} kW\nAngefordert: {7} kW
+
+# ---------- Diesel-Generator ----------
+diesel.prompt.running=Diesel-Generator: läuft - Motor ausschalten
+diesel.prompt.pull=Diesel-Generator: Reißleine ziehen ({0}/{1})
+diesel.prompt.empty=Diesel-Generator: Tank leer - Handkurbel drehen
+diesel.status.decoupled=AUS (abgekoppelt)
+diesel.status.engine=Motor läuft
+diesel.status.crank=Handkurbel
+diesel.status.coast=Läuft aus
+diesel.status.stopped=Steht
+diesel.info=Diesel-Generator: {0}\nDiesel: {1}/{2} l\nDrehzahl: {3} U/min ({4} Hz)\nLeistung: {5} / {6} kW
+
+# ---------- Bedienelemente am Generator ----------
+control.nogenerator=Bedienelement ohne Generator
+control.pull.running=Reißleine (Motor läuft bereits)
+control.pull.empty=Reißleine (Tank leer)
+control.pull.ready=Reißleine ziehen ({0}/{1})
+control.crank.running=Handkurbel (Motor läuft)
+control.crank.ready=Handkurbel drehen
+control.stop.running=Motor ausschalten
+control.stop.off=Motor ist aus
+
+# ---------- Verteiler / Messgeraet ----------
+inline.status.closed=ZU
+inline.status.throttled=gedrosselt {0} %
+inline.status.open=offen
+inline.info={0}: {1}\nStoff: {2}\nDurchfluss: {3} / s\nSumme: {4}\nInhalt: {5} / {6}
+
+# ---------- Strommesser ----------
+meter.info={0}\nLeistung: {1} kW\nSumme: {2} kWh
+
+# ---------- Sicherung ----------
+fuse.handle.tripped=AUSGELÖST - zurücksetzen
+fuse.handle.load={0} / {1} kW
+fuse.status.tripped=AUSGELÖST
+fuse.status.off=AUS
+fuse.status.on=EIN
+fuse.info=Sicherung: {0}\nLast: {1} / {2} kW\nErwärmung: {3} %
+
+# ---------- Pumpe ----------
+pump.status.off=AUS
+pump.status.nopower=Kein Strom
+pump.status.pumping=Pumpt
+pump.status.ready=Bereit
+pump.info=Pumpe: {0}\nVersorgung: {1} %\nPuffer: {2}/{3}\nBedarf: {4} kW
+
+# ---------- Stromnetz ----------
+grid.status.nogenerator=Kein Erzeuger
+grid.status.blackout=BLACKOUT - Neustart läuft
+grid.status.nopower=Keine Leistung
+grid.status.shedding=Lastabwurf aktiv
+grid.status.underpowered=Unterversorgung
+grid.status.ok=OK
+grid.hud.title=STROMNETZ   [{0}] Ansicht wechseln
+grid.hud.net=Netz {0}: {1}
+grid.hud.values=   Erzeugung {0} kW  |  Last {1} kW  |  {2} Hz
+grid.hud.none=Kein Netz vorhanden
+
+# ---------- Leitungsmodus ----------
+pipe.hint=LEITUNGSMODUS   [{0}] beenden   [<secondary>] abbrechen   [{1}] Leitung entfernen
+pipe.hint.first=Ersten Anschluss anvisieren und klicken
+pipe.hint.second=Zweiten Anschluss anvisieren und klicken
+pipe.port.power={0} ({1})
+pipe.port.cable={0} - Kabel {1} / {2} kW
+pipe.port.flow={0} – {1} ({2})
+
+# ---------- Schalter ----------
+switch.prompt={0}: {1}
+
+# ---------- Baumenue ----------
+build.title=BAUMENÜ
+build.tools=WERKZEUGE
+build.machines=MASCHINEN
+build.demolish=Abreißen
+build.move=Umplatzieren
+build.hint.demolish=ABRISS-MODUS   [<primary>] Maschine abreißen   [<secondary>] beenden
+build.hint.moveselect=UMPLATZIEREN   [<primary>] Maschine aufnehmen   [<secondary>] beenden
+build.hint.movecarry=UMPLATZIEREN   [<primary>] absetzen   [<rotl>/<rotr>] drehen   [<secondary>] abbrechen\nAngeschlossene Leitungen werden beim Absetzen entfernt.
+build.target=Ziel: {0}
+
+# ---------- Einstellungen ----------
+settings.title=EINSTELLUNGEN
+settings.textsize=Textgröße: {0} %
+settings.small=Klein
+settings.medium=Mittel
+settings.large=Groß
+settings.xlarge=Sehr groß
+settings.preview=Vorschau:
+settings.preview.text=Kessel: Brennt\nKohle: 4/10\nWasser: 80.0/100
+settings.language=Sprache
+settings.reset=Zurücksetzen
+settings.close=Schließen
+
+# ---------- Welt ----------
+world.loading=Welt wird erzeugt ... {0} %
+
+# ---------- Feuerregler ----------
+boiler.fire.auto=Auto
+boiler.fire.manual=Hand
+damper.prompt.auto=Feuerregler: Automatik (Feuer {0} %) - Stufe wechseln
+damper.prompt.manual=Feuerregler: {0} % - Stufe wechseln
+
+# ---------- Netzanzeige ----------
+grid.hud.counts={0} Erzeuger, {1} Verbraucher
+grid.hud.events=Ereignisse
+grid.hud.noevents=Keine Ereignisse
+grid.hud.eventline=vor {0} s: {1}
+grid.chart.power=Leistung (letzte Minute)
+grid.chart.load=Last
+grid.chart.gen=Erzeugung
+grid.chart.freq=Frequenz
+grid.event.shed=Lastabwurf: {0} abgeschaltet ({1} Hz)
+grid.event.blackout=BLACKOUT! Frequenz fiel auf {0} Hz
+grid.event.fuse=Sicherung ausgelöst: {0} ({1} kW bei {2} kW)
+grid.event.cable=Kabel durchgebrannt ({0} kW bei {1} kW)
+grid.status.battery=Inselbetrieb (Batterie)
+grid.hud.storage=   Batterie x{0}: {1}/{2} kWh ({3} %)  |  {4} kW
+machine.Battery=Batterie
+battery.status.off=Aus
+battery.status.overheat=UEBERHITZT
+battery.status.discharging=Entlädt
+battery.status.charging=Lädt
+battery.status.island=Inselbetrieb
+battery.status.idle=Bereit
+battery.info=Batterie: {0}\nLadung: {1} / {2} kWh ({3} %)\nLeistung: {4} kW\nTemperatur: {5} °C\nGesundheit: {6} %
+save.page.settings=Einstellungen
+save.page.saves=Spielstände
+save.slot.auto=Autospeicherung
+save.slot.quick=Schnellspeicherung (F5 speichern / F9 laden)
+save.slot.n=Spielstand {0}
+save.empty=- leer -
+save.info={0}  |  Spielzeit {1}  |  {2} Maschinen
+save.button.save=Speichern
+save.button.load=Laden
+save.saved=Gespeichert: {0}
+save.loaded=Geladen: {0}
+save.loading=Lade Spielstand ...
+save.error.save=Speichern fehlgeschlagen
+save.error.load=Laden fehlgeschlagen: {0}
+save.error.world=Dieser Spielstand gehört zu einer anderen Welt (Seed oder Größe).
+save.error.missing=Kein Spielstand vorhanden
+
+# ---------- Eingabe ----------
+input.mouse.left=Linksklick
+input.mouse.right=Rechtsklick
+pad.cross=Kreuz
+pad.circle=Kreis
+pad.square=Quadrat
+pad.triangle=Dreieck
+pad.dpad.up=Steuerkreuz oben
+pad.dpad.down=Steuerkreuz unten
+pad.dpad.left=Steuerkreuz links
+pad.dpad.right=Steuerkreuz rechts
+# ---------- Mehrspieler ----------
+net.page=Mehrspieler
+net.name=Dein Name
+net.port=Port
+net.host=Spiel hosten
+net.join=Beitreten
+net.address=Adresse des Hosts (IP)
+net.disconnect=Trennen
+net.players=Spieler:
+net.you=(du)
+net.addresses=Adressen dieses PCs: {0}
+net.hint.lan=Im selben Netzwerk trägt der Mitspieler die Adresse des Hosts ein. Über das Internet muss der Host den Port am Router freigeben, oder ihr nutzt ein VPN (z. B. Tailscale oder ZeroTier). Beide brauchen dieselben Welt-Einstellungen (Seed, Größe).
+net.status.offline=Nicht verbunden (Einzelspiel)
+net.status.host=Host: {0} Spieler, Port {1}
+net.status.client=Verbunden mit {0}
+net.status.connecting=Verbinde mit {0} ...
+net.status.loading=Lade Welt vom Host ...
+net.joined={0} ist beigetreten
+net.left={0} hat das Spiel verlassen
+net.error.version=Die Spielversionen passen nicht zusammen.
+net.error.world=Die Welt passt nicht (Seed oder Größe sind verschieden).
+net.error.full=Das Spiel ist voll.
+net.error.connect=Verbindung fehlgeschlagen: {0}
+net.error.lost=Verbindung zum Host verloren.
+net.error.noload=Laden ist im Mehrspieler nicht möglich.
+net.error.client=Nur der Host kann speichern.
+net.error.notready=Die Welt ist noch nicht fertig geladen.
+net.error.port=Ungültiger Port (1024 bis 65535).
+net.error.host=Host konnte nicht gestartet werden: {0}
+medium.any=Universal
+port.universal=Universal (Ein-/Ausgang)
+pipe.port.any=Universal-Anschluss - nimmt den Stoff an, der zuerst angesteckt wird ({0})
+junction.label=Universal-Verteiler
+junction.info.empty={0}: noch nichts angesteckt
+junction.info.fluid={0}: {1} ({2} / {3})
+junction.info.power={0}: {1}
+furnace.status.broken=DEFEKT
+furnace.status.tapping=Abstich läuft
+furnace.status.frozen=Eisen zu kalt zum Abstechen
+furnace.status.off=Gebläse aus
+furnace.status.nopower=Kein Strom
+furnace.status.hearthfull=Herd voll (abstechen)
+furnace.status.slagfull=Schlacke voll (abstechen)
+furnace.status.smelting=Schmilzt
+furnace.status.nocoal=Keine Kohle
+furnace.status.heating=Heizt auf
+furnace.status.noore=Kein Erz
+furnace.status.ready=Bereit
+furnace.info=Hochofen: {0}\nTemperatur: {1} °C - Wind: {2} %\nErz: {3}/{4} - Kohle: {5}/{6}\nHerd: {7} {8} kg - Schlacke {9} kg\nKühlwasser: {10} l - Verschleiß: {11} %
+elevator.floor=Etage {0}
+elevator.prompt=Aufzug nach {0}   |   {1}
+elevator.status.idle=bereit ({0})
+elevator.status.moving=fährt nach {0}
+elevator.status.nopower=kein Strom
+elevator.status.overload=Überlast ({0} / {1} kg)
+conveyor.status.running=Läuft
+conveyor.status.off=AUS
+conveyor.status.nopower=Kein Strom
+conveyor.info=Förderband: {0}\nGeschwindigkeit: {1} m/s\nGegenstände: {2}
+medium.melt=Schmelze
+metal.iron=Eisen
+foundry.status.nopower=Kein Strom
+foundry.status.pouring=Gießt
+foundry.status.frozen=Erstarrt (Heizung nötig)
+foundry.status.heating=Schmilzt auf
+foundry.status.moldsfull=Formen belegt (Platten herausnehmen)
+foundry.status.cooling=Platten kühlen ab
+foundry.status.ready=Bereit
+foundry.status.empty=Leer
+foundry.info=Gießerei: {0}\nSchmelze: {1} {2}/{3} kg - {4} °C\nFormen: {5}/{6} belegt
+ladder.prompt=[{0}]  Leiter benutzen
+ladder.climbing=W/S oder linker Stick: klettern   |   [{0}] loslassen   |   [{1}] abspringen
+mainmenu.start=Spiel starten
+mainmenu.load=Spiel laden
+mainmenu.multiplayer=Mehrspieler
+mainmenu.settings=Einstellungen
+mainmenu.quit=Beenden
+mainmenu.back=Zurück
+mainmenu.loading=Spielstand wird geladen ...
+mainmenu.worldwait=Die Welt wird erzeugt, einen Moment ...
+mainmenu.tomenu=Hauptmenü
+save.delete=Löschen
+save.delete.confirm1=Wirklich löschen?
+save.delete.confirm2=Endgültig löschen!
+save.deleted={0} wurde gelöscht
+build.backfill.on=GELÄNDE ANPASSEN: AN   [{0}] ausschalten
+build.backfill.off=GELÄNDE ANPASSEN: AUS   [{0}] einschalten
+build.categories=KATEGORIEN
+build.back=Zurück
+build.cat.power=Strom & Licht
+build.cat.production=Produktion
+build.cat.fluids=Wasser & Dampf
+build.cat.transport=Transport
+build.cat.structures=Bauteile
+build.cat.other=Sonstiges
+port.cable.small=dünnes Kabel
+cart.grab=Schubkarre greifen
+cart.release=Schubkarre loslassen
+cart.load=Ladung: {0} / {1} kg
