@@ -24,7 +24,8 @@ your success.
 ====================================================================================
 
 
-Also, this is mostly vibe-coded, so feel free to ask me on Discord, but Claude or something like that will be better for explaining.
+Also, this is mostly vibe-coded, so feel free to ask me on Discord (Link to the Server: https://discord.gg/j9m966ymeY ),
+but Claude or something like that will be better for explaining.
 Me and my brother are mostly responsible for the "art" and leading the Code/Game into the right direction.
 
 
