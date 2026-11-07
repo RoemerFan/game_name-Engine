@@ -13,7 +13,7 @@ is providing (Energy)Infrastructure, to get goods from one place to another.
 
 The World:
 
-The Open-World consists of a Seed-based Chunk System (A known example for this would be Minecraft). It uses so called "Surface Nets" to generate soft slopes, 
+The Open-World consists of a Seed-based Chunk System (A known example for this would be the Game "Minecraft"). It uses so called "Surface Nets" to generate soft slopes, 
 instead of blocks. The whole ground can be deformed, allowing you to mine your resources (Or build underground
 facilities :D).
 
