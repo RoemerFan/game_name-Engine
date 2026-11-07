@@ -8,7 +8,7 @@ Otherwise I don't know why you would ever do that.
 ABOUT THE GAME:
 
 This game is a Multiplayer automation game about building Factories and extracting ressources from the ground, 
-by extracting them from the ground, or buying them from the local shops. Also a core part of the game
+by extracting them, or buying them from the local shops. Also a core part of the game
 is providing infrastructure, to get goods from one place to another.
 
 The World:
