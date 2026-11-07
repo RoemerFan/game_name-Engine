@@ -9,7 +9,7 @@ ABOUT THE GAME:
 
 This game is a Multiplayer automation game about building Factories and extracting ressources from the ground, 
 by extracting them, or buying them from the local shops. Also a core part of the game
-is providing infrastructure, to get goods from one place to another.
+is providing (Energy)Infrastructure, to get goods from one place to another.
 
 The World:
 
