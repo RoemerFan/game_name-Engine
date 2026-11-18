@@ -120,6 +120,7 @@ build.tools=TOOLS
 build.machines=MACHINES
 build.demolish=Demolish
 build.move=Move
+build.track=Track building
 build.hint.demolish=DEMOLISH MODE   [<primary>] demolish machine   [<secondary>] exit
 build.hint.moveselect=MOVE   [<primary>] pick up machine   [<secondary>] exit
 build.hint.movecarry=MOVE   [<primary>] place   [<rotl>/<rotr>] rotate   [<secondary>] cancel\nConnected pipes are removed when placing.
@@ -297,3 +298,198 @@ port.cable.small=thin cable
 cart.grab=Grab wheelbarrow
 cart.release=Release wheelbarrow
 cart.load=Load: {0} / {1} kg
+
+# Railway
+track.hint.start=Left click: set start point (free track ends snap, middle of a track = switch)
+track.hint.end=Left click: build track up to here
+track.hint=TRACK BUILDING   [{0}] place locomotive   [{1}] remove track/loco   [{3}] parallel track/switch   [<secondary>] cancel   [{2}] exit
+track.err.steep=Too steep (8 % at most)
+track.err.curve=Curve too tight
+track.err.short=Piece too short
+track.err.long=Piece too long (60 m at most)
+track.err.node=Cannot connect here
+track.err.occupied=Another track is in the way
+track.err.stem=Remove the branches of this switch first
+track.hint.parallel.start=Left click: pick a track (start of the parallel track, side = where you aim)   ·   or click the free end of a parallel track (yellow) to continue from it
+track.hint.parallel.end=Left click: end of the parallel track on the same track
+track.hint.parallel=PARALLEL TRACK   [{0}] back to track building   [{1}] with switch: {2}   [<secondary>] cancel
+track.parallel.on=on
+track.parallel.off=off
+track.err.join=A switch can't be placed here (too close to the track end, or a vehicle is on it)
+track.err.parallelShort=Too short for a switch: pull the parallel track further ahead
+track.err.parallelEdge=The end must be on the same or the adjoining track piece
+track.switch.prompt=Throw switch (set to {0})
+track.switch.straight=straight
+track.switch.left=left
+track.switch.right=right
+track.err.cars=A vehicle is still on this track
+track.err.noTrack=No track nearby
+track.removed=Removed
+train.dir.fwd=Forward
+train.dir.back=Reverse
+train.hud=Throttle: {0} %   ·   Direction: {1}   ·   Speed: {2} km/h
+train.hint=Throttle [{0}]/[{1}]   ·   Direction [{2}]   ·   Brake [{3}]   ·   Horn [{4}]
+train.hud2=Pressure: {0} %   ·   Water: {1} %   ·   Coal in fire: {2}
+track.err.noManager=No TrackManager in the scene (attach the script to an empty GameObject)
+
+# Telescopic conveyor
+boom.prompt.angle=Tilt: {0}°   ·   hold [<primary>] = up   ·   hold [<secondary>] = down
+boom.prompt.extend=Length: +{0} m   ·   hold [<primary>] = extend   ·   hold [<secondary>] = retract
+
+# Locomotive types, engines, tenders
+track.loco.select=Vehicle: {0}   [{1}] switch
+train.engine.on=running
+train.engine.off=off
+train.diesel.status=Diesel engine: {0}
+train.electric.status=Electric motor: {0}
+train.tender.coal=Tender: {0} / {1} coal pieces
+train.tender.diesel=Diesel tank: {0} l ({1} %)
+train.tender.electric=Battery: {0} kWh ({1} %)
+keys.page=Controls
+keys.col.function=Function
+keys.col.keyboard=Keyboard
+keys.col.mouse=Mouse
+keys.col.pad=Controller
+keys.note=Click a field, then press the key, mouse button or controller button you want. Esc = cancel, Backspace/Del = unassign, × = reset row. * = changed, red = used twice. The defaults are only a suggestion.
+keys.g.move=Movement
+keys.g.items=Items and interaction
+keys.g.build=Building
+keys.g.pipes=Pipes and cables
+keys.g.track=Railway: tracks
+keys.g.train=Railway: driving
+keys.g.misc=Misc
+keys.f.walk=Walk
+keys.f.look=Look around
+keys.f.jump=Jump
+keys.f.climb=Ladder up/down
+keys.f.interact=Use (switch, lever, points, turntable)
+keys.f.pickup=Pick up
+keys.f.place=Put down / place
+keys.f.release=Release
+keys.f.primary=Primary action (build, click)
+keys.f.secondary=Secondary action (demolish, cancel)
+keys.f.buildmenu=Build menu
+keys.f.rotate=Rotate
+keys.f.grid=Build grid on/off
+keys.f.gridanchor=Align grid to machine
+keys.f.backfill=Backfill earth
+keys.f.pipemode=Pipe mode
+keys.f.trackmode=Track tool
+keys.f.trackclick=Set track point
+keys.f.parallel=Parallel track mode
+keys.f.parallelswitch=Parallel with/without switch
+keys.f.locoplace=Place locomotive
+keys.f.locotype=Change loco type
+keys.f.switch=Throw points
+keys.f.boom=Telescopic belt control
+keys.f.throttle=Throttle (more/less)
+keys.f.reverser=Direction
+keys.f.brake=Brake
+keys.f.horn=Horn
+keys.f.monitor=Toggle display
+keys.f.pause=Pause / menu
+keys.f.quicksave=Quick save
+keys.f.timeskip=Skip time
+keys.f.menuconfirm=Confirm in menu
+keys.pad.leftstick=Left stick
+keys.pad.rightstick=Right stick
+keys.mouse.move=Mouse movement
+keys.key.space=Space
+keys.f.remove=Remove (pipe, track, loco)
+keys.pad.buildmenu=via the build menu
+track.hint.tt=[{0}] place turntable   ·   At the post beside an exit [{1}]: turn the bridge to it
+track.hint.tt.place=TURNTABLE   [<primary>] place here (exit 1 points where you look)   [{0}] back   [<secondary>] cancel
+track.tt.prompt=Turn bridge to exit {0}
+track.tt.here=The bridge is already at this exit
+track.tt.moving=The bridge is turning ...
+track.err.bridge=The bridge belongs to the turntable (remove the turntable in its middle)
+track.err.ttBusy=Remove all tracks at the turntable first
+track.err.ttCars=A vehicle is on the bridge
+track.err.ttMoving=The bridge is still turning
+keys.f.turntable=Place turntable
+input.mouse.middle=Middle click
+keys.listen=Press a key ...
+keys.reset=Reset all to default
+keys.see=see below
+keys.f.forward=Walk forward / ladder up
+keys.f.back=Walk backward / ladder down
+keys.f.left=Walk left
+keys.f.right=Walk right
+keys.f.rotateleft=Rotate left
+keys.f.rotateright=Rotate right
+keys.f.throttleup=Loco: more throttle
+keys.f.throttledown=Loco: less throttle
+keys.f.quickload=Quick load
+track.err.parallelDir=From a track end you can only continue in the direction it points
+track.err.ttNear=A vehicle is too close to the bridge – it must be fully on the bridge or well clear of it
+car.coupler.couple=Couple
+car.coupler.uncouple=Uncouple
+car.coupler.none=Coupler (no vehicle in reach)
+wagon.hatch.open=Open floor hatch
+wagon.hatch.close=Close floor hatch
+track.err.shaftBridge=No shaft possible on a turntable bridge
+track.err.shaftEdge=No room for the shaft here – the track piece is too short or the spot is too close to its end
+track.err.shaftOverlap=There is already a shaft here
+track.hint.shaft=UNLOADING SHAFT   [<primary>] build shaft into the track   [{1}] remove shaft   [{0}] back   [<secondary>] cancel
+keys.f.shaft=Unloading shaft tool
+train.mass=Train: {0} t, acceleration {1} %
+train.tender.water=Water: {0} / {1}
+hose.pickup=Take hose nozzle
+hose.unplug=Unplug hose
+hose.carry.plug=HOSE   [{0}] connect
+hose.carry.drop=HOSE   [{0}] drop
+medium.shaft=Shaft
+pipe.port.shaft={0} ({1}) - {2} rpm
+shaftengine.status.off=OFF
+shaftengine.status.nosteam=No steam!
+shaftengine.status.running=Running
+shaftengine.status.stopped=Stopped
+shaftengine.info=Steam engine: {0}\nSteam: {1}/{2}\nSpeed: {3} rpm\nOutput: {4} / {5} kW\nGovernor: {6} %
+shaftgen.status.decoupled=OFF (decoupled)
+shaftgen.status.running=Running
+shaftgen.status.slow=Too slow!
+shaftgen.status.stopped=Stopped
+shaftgen.info=Shaft generator: {0}\nSpeed: {1} rpm ({2} Hz)\nOutput: {3} / {4} kW\nRequested: {5} kW
+lever.throttle=Throttle: {0} %   ·   hold [<primary>] = up   ·   hold [<secondary>] = down
+lever.reverser=Direction: {0}   ·   [<primary>] = switch (standing only)
+lever.brake=Brake   ·   hold [<primary>] = brake
+lever.horn=Horn   ·   [<primary>] = pull
+shaftclutch.info=Clutch: {0}\nSide A: {1} rpm\nSide B: {2} rpm\nTorque: {3} / {4} Nm
+shaftclutch.engaged=Engaged
+shaftclutch.disengaged=Disengaged
+shaftgear.info=Gearbox ratio {0}\nInput: {1} rpm\nOutput: {2} rpm\nTorque: {3} / {4} Nm
+shaftclutch.slipping=Slipping
+shaftgear.broken=BROKEN (overload)! Switch on to reset
+shaftgear.label=Gearbox
+inline.info.shaft={0}\nRatio {1}\nSide A: {2} rpm\nSide B: {3} rpm\nTorque: {4} / {5} Nm
+
+# ---------- Goods receiver ----------
+machine.GoodsReceiver=Goods Receiving
+receiver.nomarket=Goods receiving\nNo buyer in range (village too far)
+receiver.market=Goods receiving\nBuyer: {0}
+receiver.price={0}: {1} each
+receiver.sold=Sold: {0} for {1}
+receiver.total=Earned: {0}
+good.Coal=Coal
+good.IronOre=Iron ore
+good.IronIngots=Iron ingots
+good.Wood=Wood
+good.Food=Food
+good.Tools=Tools
+
+# ---------- Locomotive shed ----------
+machine.LocoShed=Locomotive Shed
+shed.info=Locomotive shed\nWater: {0} / {1}\nDiesel: {2} / {3}\nLocomotives inside: {4}
+shed.serving=Servicing locomotive…
+
+# ---------- Mine / loading station ----------
+mine.prompt=Buy {0}x {1} ({2})
+mine.title=Mine {0}\nGoods: {1}
+mine.stock=Stock: {0} / {1}
+mine.deposit=Deposit: {0} of {1} m³ left\nPit depth: {2} m
+mine.exhausted=Deposit exhausted
+mine.nostock=Not enough in stock
+mine.nomoney=Not enough money
+mine.nodigger=No player digger found
+mine.noprefab=No coal/ore prefab set on the digger
+mine.bought=Bought {0}x {1}

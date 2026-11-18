@@ -11,7 +11,7 @@ using UnityEngine;
 //
 // Ports im Prefab: Water/Input, Water/Output, Power.
 // Optional: ein MachineSwitch (Ein/Aus) irgendwo unter der Pumpe.
-public class ElectricPump : MonoBehaviour, IPortOwner, IPowerConsumer, ISaveable
+public class ElectricPump : MonoBehaviour, IPortOwner, IPowerConsumer, IShaftDriven, ISaveable
 {
     [Header("Strom")]
     [SerializeField] private float ratedPowerKW = 8f;
@@ -46,16 +46,37 @@ public class ElectricPump : MonoBehaviour, IPortOwner, IPowerConsumer, ISaveable
 
     private bool IsOn => machineSwitch == null || machineSwitch.IsOn;
 
+    // Laeuft die Pumpe ueber eine Welle (siehe ShaftDrive)? Dann zaehlt der Strom nicht.
+    private bool mechanical;
+
     // Wenig Verbrauch im Leerlauf, volle Leistung beim Pumpen.
     public float DemandKW =>
-        IsOn ? Mathf.Lerp(idlePowerKW, ratedPowerKW, activity) : 0f;
+        IsOn && !mechanical ? Mathf.Lerp(idlePowerKW, ratedPowerKW, activity) : 0f;
 
     public float RatedPowerKW => ratedPowerKW;
     public int Importance => importance;
 
     public void SetSupply(float fraction)
     {
+        // Mit Wellenantrieb gilt die Welle, nicht der Strom.
+        if (mechanical)
+            return;
+
         supply = Mathf.Clamp01(fraction);
+    }
+
+    // ---------- Wellenantrieb (IShaftDriven) ----------
+
+    public bool ShaftOn => IsOn;
+
+    public float ShaftLoad01 => activity;
+
+    public void SetShaftSupply(float fraction, bool active)
+    {
+        mechanical = active;
+
+        if (active)
+            supply = Mathf.Clamp01(fraction);
     }
 
     private void Awake()

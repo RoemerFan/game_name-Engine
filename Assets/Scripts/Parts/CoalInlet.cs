@@ -29,7 +29,7 @@ public class CoalInlet : MonoBehaviour
             return;
 
         // Dieselkanister sind keine Kohle.
-        if (coal is FuelCanister)
+        if (coal is FuelCanister || coal is DigTool)
             return;
 
         // Eisenerz, Barren und Schlacke brennen nicht.

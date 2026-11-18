@@ -250,10 +250,10 @@ public class SaveSystem : MonoBehaviour
         if (IsLoading)
             return;
 
-        if (GameInput.KeyDown(quickSaveKey))
+        if (GameInput.Pressed(GameAction.QuickSave, quickSaveKey))
             DoSave(1, false);
 
-        if (GameInput.KeyDown(quickLoadKey))
+        if (GameInput.Pressed(GameAction.QuickLoad, quickLoadKey))
             StartLoad(1);
 
         // Autospeicherung
@@ -384,6 +384,12 @@ public class SaveSystem : MonoBehaviour
         data.savedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
         data.playSeconds = playSeconds;
         data.world = world.WorldSignature;
+
+        data.economy = new StateBag();
+        VillageSystem.SaveEconomy(data.economy);
+
+        data.tracks = new StateBag();
+        TrackManager.SaveAll(data.tracks);
 
         SkyController sky = SkyController.Instance;
 
@@ -670,6 +676,12 @@ public class SaveSystem : MonoBehaviour
         //     erscheinen - sonst fielen lose Gegenstaende durch den noch fehlenden Boden.
         world.PreloadAround(data.playerPosition, 4f);
 
+        // Gleise und Loks wieder aufbauen und das Gelaende darunter vorladen.
+        TrackManager.LoadAll(data.tracks);
+
+        foreach (Vector3 trackPoint in TrackManager.CarPositions(data.tracks))
+            world.PreloadAround(trackPoint, 1f);
+
         foreach (MachineRecord rec in data.machines)
             world.PreloadAround(rec.position, 2f);
 
@@ -763,6 +775,9 @@ public class SaveSystem : MonoBehaviour
 
         playSeconds = data.playSeconds;
         autosaveTimer = 0f;
+
+        // Geld und Doerfer.
+        VillageSystem.LoadEconomy(data.economy);
 
         // Ab jetzt halten die Maschinen und Gegenstaende selbst ihr Gelaende geladen.
         world.ClearPreload();

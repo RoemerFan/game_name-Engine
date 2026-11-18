@@ -189,6 +189,22 @@ public class Boiler : MonoBehaviour, IPortOwner, ISaveable
         return true;
     }
 
+    // Entnimmt Dampf (z. B. fuer eine Lokomotive). Gibt zurueck, wie viel wirklich da war.
+    public float ConsumeSteam(float amount)
+    {
+        float taken = Mathf.Clamp(amount, 0f, steam);
+        steam -= taken;
+        return taken;
+    }
+
+    // Fuellt Wasser nach (z. B. aus dem Tender). Gibt die aufgenommene Menge zurueck.
+    public float AddWater(float amount)
+    {
+        float accepted = Mathf.Clamp(amount, 0f, waterCapacity - waterLevel);
+        waterLevel += accepted;
+        return accepted;
+    }
+
     // Manuelle Entnahme von Ruß (ganze Stücke).
     public int TakeSoot(int amount)
     {

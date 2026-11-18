@@ -244,7 +244,7 @@ public class SkyController : MonoBehaviour
         {
             float speed = 24f / (dayLengthMinutes * 60f);
 
-            if (GameInput.KeyHeld(fastForwardKey))
+            if (GameInput.Held(GameAction.TimeSkip, fastForwardKey))
                 speed *= fastForwardFactor;
 
             timeOfDay = Mathf.Repeat(timeOfDay + speed * Time.deltaTime, 24f);

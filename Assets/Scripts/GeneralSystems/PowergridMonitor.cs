@@ -12,7 +12,7 @@ public class PowerGridMonitor : MonoBehaviour
     public KeyCode toggleKey = KeyCode.F3;
 
     private enum Mode { Compact, Full, Hidden }
-    private Mode mode = Mode.Compact;
+    private Mode mode = Mode.Hidden;   // Anfangs aus; F3 schaltet durch: Kompakt -> Mit Kurven -> Aus
 
     private GUIStyle panelStyle;
     private GUIStyle titleStyle;

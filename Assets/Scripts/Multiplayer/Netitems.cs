@@ -31,6 +31,7 @@ public class NetItem : MonoBehaviour
     private Rigidbody body;
     private Collider[] colliders;
     private FuelCanister canister;
+    private DigTool tool;   // Werkzeuge nutzen den Liters-Kanal fuer ihre Haltbarkeit
 
     // Schubkarren behalten ihre Collider, auch wenn ein anderer Spieler sie schiebt
     // (sonst fallen Ladung und Spieler durch sie hindurch).
@@ -48,8 +49,14 @@ public class NetItem : MonoBehaviour
 
     public float Liters
     {
-        get { return canister != null ? canister.Liters : 0f; }
-        set { if (canister != null) canister.Liters = value; }
+        get { return canister != null ? canister.Liters : (tool != null ? tool.Durability : 0f); }
+        set
+        {
+            if (canister != null)
+                canister.Liters = value;
+            else if (tool != null)
+                tool.Durability = value;
+        }
     }
 
     // Rechnet DIESER Rechner die Physik?
@@ -68,6 +75,7 @@ public class NetItem : MonoBehaviour
         body = GetComponent<Rigidbody>();
         colliders = GetComponentsInChildren<Collider>(true);
         canister = GetComponent<FuelCanister>();
+        tool = GetComponent<DigTool>();
         keepCollidersWhenHeld = GetComponent<Wheelbarrow>() != null;
 
         MarkSent();
@@ -265,6 +273,41 @@ public static class NetItems
             item = go.AddComponent<NetItem>();
 
         return item;
+    }
+
+    // Host: gibt einen frisch erzeugten Gegenstand einem Mitspieler in die Hand.
+    public static void GiveToPlayer(GameObject go, int player)
+    {
+        NetItem item = go != null ? go.GetComponent<NetItem>() : null;
+
+        if (item == null || item.Id == 0 || NetSync.Mode != NetMode.Host)
+            return;
+
+        item.HeldBy = player;
+        item.OwnerId = player;
+        item.ApplyOwnership();
+        BroadcastOwner(item);
+    }
+
+    // Der Gegenstand, den ich laut Host gerade in der Hand halten soll (oder null).
+    public static NetItem HeldByMeItem()
+    {
+        if (!NetSync.IsOnline)
+            return null;
+
+        foreach (NetItem item in all)
+        {
+            if (item != null && item.HeldBy == NetSync.LocalId)
+                return item;
+        }
+
+        return null;
+    }
+
+    // Gegenstand nach Nummer (oder null).
+    public static NetItem ById(int id)
+    {
+        return Find(id);
     }
 
     private static NetItem Find(int id)

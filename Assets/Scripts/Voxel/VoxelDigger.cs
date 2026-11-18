@@ -71,6 +71,11 @@ public class VoxelDigger : MonoBehaviour
     [Tooltip("Hoechstens so viele Stuecke pro Grabvorgang.")]
     [SerializeField] private int maxDropsPerDig = 12;
 
+    // Werkzeug in der Hand (oder null = blosse Hand) und die damit geltenden Werte.
+    private DigTool tool;
+    private float CurReach { get { return reach + (tool != null ? tool.reachBonus : 0f); } }
+    private float CurRadius { get { return digRadius * (tool != null ? tool.radiusMultiplier : 1f); } }
+
     // Anvisierte Stelle
     private bool hasTarget;
     private Vector3 targetPoint;
@@ -112,6 +117,8 @@ public class VoxelDigger : MonoBehaviour
 
     void Update()
     {
+        tool = CoalPickup.LocalHeldItem as DigTool;
+
         // Ohne Welt, Kamera oder fertige Erzeugung gibt es nichts zu tun.
         if (world == null || playerCamera == null || !world.IsReady)
         {
@@ -138,7 +145,11 @@ public class VoxelDigger : MonoBehaviour
         if (!blocked && GameInput.Held(GameAction.Primary) && BlockInfo.IsDiggable(targetMaterial))
         {
             // Je haerter das Material, desto laenger dauert ein Grabvorgang.
-            progress += Time.deltaTime * digSpeed / HardnessOf(targetMaterial);
+            float speed = digSpeed * (tool != null ? tool.SpeedFor(targetMaterial) : 1f);
+            progress += Time.deltaTime * speed / HardnessOf(targetMaterial);
+
+            if (tool != null)
+                tool.SetSwing(progress);
 
             if (progress >= 1f)
             {
@@ -172,7 +183,7 @@ public class VoxelDigger : MonoBehaviour
         if (!Physics.Raycast(
             ray,
             out RaycastHit hit,
-            reach,
+            CurReach,
             ~0,
             QueryTriggerInteraction.Ignore))
         {
@@ -199,7 +210,7 @@ public class VoxelDigger : MonoBehaviour
     {
         Collider[] hits = Physics.OverlapSphere(
             DigCenter(),
-            digRadius + 0.15f,
+            CurRadius + 0.15f,
             ~0,
             QueryTriggerInteraction.Ignore);
 
@@ -216,14 +227,21 @@ public class VoxelDigger : MonoBehaviour
     // Material herausgeschnitten wird.
     Vector3 DigCenter()
     {
-        return targetPoint - targetNormal * (digRadius * 0.35f);
+        return targetPoint - targetNormal * (CurRadius * 0.35f);
     }
 
     // Schneidet die Kugel aus dem Gelaende und gibt die Beute aus.
     void Dig()
     {
         // Graben laeuft als Kommando: Im Mehrspieler sehen alle dasselbe Loch.
-        NetSync.Submit(NetCommand.Dig(DigCenter(), digRadius));
+        NetSync.Submit(NetCommand.Dig(DigCenter(), CurRadius));
+
+        // Das Werkzeug nutzt sich ab. Ist es kaputt, verschwindet es aus der Hand.
+        if (tool != null && tool.Wear(targetMaterial))
+        {
+            NetItems.Consume(tool.gameObject);
+            tool = null;
+        }
     }
 
     // Der Digger des lokalen Spielers (bekommt die Beute).
@@ -260,6 +278,33 @@ public class VoxelDigger : MonoBehaviour
             SpawnDrop(ironDropPrefab, center, ItemKind.Ore);
     }
 
+    // Erzeugt Kohle- oder Erzstuecke an einer Stelle (z. B. an der Verladestation einer Mine, nach dem Kaufen).
+    // Gibt false zurueck, wenn dafuer kein Prefab eingetragen ist (Coal Drop Prefab / Iron Drop Prefab).
+    public bool DropPieces(ItemKind kind, int count, Vector3 position, float spread)
+    {
+        GameObject prefab = kind == ItemKind.Coal ? coalDropPrefab : ironDropPrefab;
+
+        if (prefab == null)
+            return false;
+
+        ItemTag prefabTag = prefab.GetComponent<ItemTag>();
+        string metal = prefabTag != null ? prefabTag.metal : "";
+        float mass = prefabTag != null ? prefabTag.massKg : 0f;
+
+        if (kind == ItemKind.Ore && string.IsNullOrEmpty(metal))
+            metal = "Iron";
+
+        for (int i = 0; i < count; i++)
+        {
+            Vector3 p = position + new Vector3(Random.Range(-spread, spread), Random.Range(0f, spread), Random.Range(-spread, spread));
+            Vector3 velocity = Random.insideUnitSphere * 0.5f;
+
+            NetItems.Spawn(prefab, p, Random.rotation, velocity, kind, metal, mass, false);
+        }
+
+        return true;
+    }
+
     // Erzeugt ein Beute-Objekt in der frisch ausgegrabenen Hoehle.
     void SpawnDrop(GameObject prefab, Vector3 center, ItemKind kind)
     {
@@ -267,7 +312,7 @@ public class VoxelDigger : MonoBehaviour
             return;
 
         // Innerhalb der Kugel, damit nichts in der Erde steckt.
-        Vector3 position = center + Random.insideUnitSphere * (digRadius * 0.5f);
+        Vector3 position = center + Random.insideUnitSphere * (CurRadius * 0.5f);
 
         // Metall und Gewicht aus dem Prefab; Erz ohne Angabe ist Eisenerz.
         ItemTag prefabTag = prefab.GetComponent<ItemTag>();
@@ -315,7 +360,7 @@ public class VoxelDigger : MonoBehaviour
             return;
 
         highlight.transform.position = DigCenter();
-        highlight.transform.localScale = Vector3.one * (digRadius * 2f);
+        highlight.transform.localScale = Vector3.one * (CurRadius * 2f);
 
         // Rot, wenn eine Maschine im Weg ist.
         if (blocked)

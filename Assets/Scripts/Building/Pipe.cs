@@ -35,6 +35,12 @@ public class Pipe : MonoBehaviour
     private Material material;
     private Mesh mesh;
 
+    // Wellen drehen sich sichtbar: ein Streifenmuster wandert um das Rohr (siehe ShaftGrid).
+    private bool isShaft;
+    private float spinOffset;
+    private static Texture2D shaftTexture;
+    private const float ShaftVisualFactor = 0.04f;
+
     // Standard-Material der Pipeline, einmal geliehen und fuer alle Leitungen genutzt.
     private static Material sharedBaseMaterial;
 
@@ -51,8 +57,12 @@ public class Pipe : MonoBehaviour
         baseColor = color;
 
         // 1) Verlauf der Mittellinie berechnen.
-        List<Vector3> path = BuildPath(
-            a, b, stubLength, bendStrength, sagPerMeter, maxSag, radius);
+        // Wellen sind immer gerade (Kardangelenke an den Enden), alles andere wird weich gebogen.
+        bool shaft = a.RawMedium == PortMedium.Shaft;
+
+        List<Vector3> path = shaft
+            ? BuildShaftPath(a, b, radius)
+            : BuildPath(a, b, stubLength, bendStrength, sagPerMeter, maxSag, radius);
 
         // 2) Aus der Mittellinie ein rundes Rohr formen.
         int sides = radius < 0.012f ? 6 : (radius < 0.03f ? CableSides : PipeSides);
@@ -62,11 +72,110 @@ public class Pipe : MonoBehaviour
         material = new Material(GetBaseMaterial());
         material.color = color;
 
+        if (shaft)
+        {
+            isShaft = true;
+            material.mainTexture = GetShaftTexture();
+            BuildShaftFittings(a, b, radius);
+            BuildShaftFittings(b, a, radius);
+        }
+
         MeshFilter filter = gameObject.AddComponent<MeshFilter>();
         filter.sharedMesh = mesh;
 
         MeshRenderer meshRenderer = gameObject.AddComponent<MeshRenderer>();
         meshRenderer.sharedMaterial = material;
+    }
+
+    // ---------- Wellen: gerade Stange mit Gelenken ----------
+
+    // Laenge des Anschlussstuecks zwischen Port und Gelenkmitte.
+    private static float JointLength(float radius)
+    {
+        return Mathf.Max(0.07f, radius * 1.8f);
+    }
+
+    // Die Welle laeuft in einer geraden Linie von Gelenk zu Gelenk. Das Gelenk sitzt ein Stueck vor dem Port.
+    private static List<Vector3> BuildShaftPath(Port a, Port b, float radius)
+    {
+        float jl = JointLength(radius);
+        Vector3 start = a.transform.position + a.transform.forward * jl;
+        Vector3 end = b.transform.position + b.transform.forward * jl;
+
+        // Zu kurz fuer eine Rohrberechnung: etwas verlaengern.
+        if ((end - start).sqrMagnitude < 0.0004f)
+            end = start + (b.transform.position - a.transform.position).normalized * 0.02f + Vector3.up * 0.0001f;
+
+        List<Vector3> path = new List<Vector3>();
+        path.Add(start);
+        path.Add(end);
+        return path;
+    }
+
+    // Anschlussstueck an einem Port: immer ein Flansch an der Maschine.
+    // Verlaeuft die Welle schraeg zur Achse des Ports, erklaert ein Kreuzgelenk den Knick.
+    private void BuildShaftFittings(Port port, Port other, float radius)
+    {
+        Vector3 pos = port.transform.position;
+        Vector3 axis = port.transform.forward;
+        Vector3 toOther = other.transform.position + other.transform.forward * JointLength(radius) - pos;
+
+        // Richtung der Welle von diesem Gelenk aus gesehen.
+        float jl = JointLength(radius);
+        Vector3 jointCenter = pos + axis * jl;
+        Vector3 shaftDir = (other.transform.position + other.transform.forward * jl - jointCenter);
+        shaftDir = shaftDir.sqrMagnitude > 0.000001f ? shaftDir.normalized : axis;
+
+        float angle = Vector3.Angle(axis, shaftDir);
+
+        Material dark = FittingMaterial(new Color(0.2f, 0.2f, 0.22f));
+        Material steel = FittingMaterial(new Color(0.62f, 0.64f, 0.68f));
+
+        // Flansch (Scheibe) an der Maschine
+        FittingCylinder("Flansch", pos + axis * 0.012f, axis, radius * 2.4f, 0.024f, dark);
+
+        if (angle < 2f)
+        {
+            // Gerade: nur eine Muffe ueber dem Anschlussstueck.
+            FittingCylinder("Muffe", pos + axis * (jl * 0.5f), axis, radius * 1.4f, jl, steel);
+            return;
+        }
+
+        // Schraeg: Gelenkgabel am Port, Kreuzgelenk als Kugel, Gabel an der Welle.
+        FittingCylinder("Gelenknabe", pos + axis * (jl * 0.5f), axis, radius * 1.3f, jl, dark);
+
+        GameObject ball = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        ball.name = "Kreuzgelenk";
+        ball.transform.SetParent(transform, true);
+        ball.transform.position = jointCenter;
+        ball.transform.localScale = Vector3.one * radius * 3.4f;
+        ball.GetComponent<Renderer>().sharedMaterial = steel;
+        Destroy(ball.GetComponent<Collider>());
+
+        FittingCylinder("Gabel", jointCenter + shaftDir * (jl * 0.5f), shaftDir, radius * 1.3f, jl, dark);
+    }
+
+    private readonly List<Material> fittingMaterials = new List<Material>();
+
+    private Material FittingMaterial(Color color)
+    {
+        Material m = new Material(GetBaseMaterial());
+        m.color = color;
+        fittingMaterials.Add(m);
+        return m;
+    }
+
+    // Zylinder entlang einer Richtung (Mitte, Richtung, Durchmesser, Laenge).
+    private void FittingCylinder(string name, Vector3 center, Vector3 direction, float diameter, float length, Material m)
+    {
+        GameObject g = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        g.name = name;
+        g.transform.SetParent(transform, true);
+        g.transform.position = center;
+        g.transform.rotation = Quaternion.FromToRotation(Vector3.up, direction);
+        g.transform.localScale = new Vector3(diameter, length * 0.5f, diameter);
+        g.GetComponent<Renderer>().sharedMaterial = m;
+        Destroy(g.GetComponent<Collider>());
     }
 
     // Macht aus der Leitung ein Kabel mit Leistungsgrenze.
@@ -88,6 +197,15 @@ public class Pipe : MonoBehaviour
         if (PortA == null || PortB == null)
         {
             Destroy(gameObject);
+            return;
+        }
+
+        // Welle: das Streifenmuster dreht sich mit der Drehzahl.
+        if (isShaft && material != null)
+        {
+            float rpm = ShaftGrid.RpmAt(PortA);
+            spinOffset = Mathf.Repeat(spinOffset + rpm / 60f * ShaftVisualFactor * Time.deltaTime, 1f);
+            material.mainTextureOffset = new Vector2(spinOffset, 0f);
             return;
         }
 
@@ -355,6 +473,35 @@ public class Pipe : MonoBehaviour
         return result;
     }
 
+    // Kleine Streifen-Textur: horizontal um das Rohr herum (u = Umfang), damit man die Drehung sieht.
+    private static Texture2D GetShaftTexture()
+    {
+        if (shaftTexture == null)
+        {
+            const int width = 16;
+            shaftTexture = new Texture2D(width, 1, TextureFormat.RGBA32, false);
+            shaftTexture.wrapMode = TextureWrapMode.Repeat;
+            shaftTexture.filterMode = FilterMode.Point;
+
+            for (int x = 0; x < width; x++)
+            {
+                // Zwei dunkle Streifen gegenueber, dazu ein heller Streifen als Markierung.
+                float v = 1f;
+
+                if (x < 2 || (x >= 8 && x < 10))
+                    v = 0.45f;
+                else if (x == 4)
+                    v = 1.3f;
+
+                shaftTexture.SetPixel(x, 0, new Color(Mathf.Min(v, 1f), Mathf.Min(v, 1f), Mathf.Min(v, 1f), 1f));
+            }
+
+            shaftTexture.Apply();
+        }
+
+        return shaftTexture;
+    }
+
     // Leiht sich das Standard-Material (so passt es zu URP und zur normalen Pipeline).
     private static Material GetBaseMaterial()
     {
@@ -383,5 +530,11 @@ public class Pipe : MonoBehaviour
 
         if (mesh != null)
             Destroy(mesh);
+
+        foreach (Material m in fittingMaterials)
+        {
+            if (m != null)
+                Destroy(m);
+        }
     }
 }

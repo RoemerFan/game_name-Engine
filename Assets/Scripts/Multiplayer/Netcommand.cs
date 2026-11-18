@@ -1,6 +1,11 @@
 using System.IO;
 using UnityEngine;
 
+// Marker fuer Bedienstellen, deren Interact() selbst schon ein Netzwerk-Kommando schickt
+// (z. B. Weichenhebel, Drehscheibe). NetSync.Interact ruft sie nur lokal auf, damit das Kommando
+// nicht bei jedem Mitspieler noch einmal ausgeloest wird.
+public interface ISelfNetworked { }
+
 // Alle Aktionen, die die gemeinsame Welt veraendern, laufen als Kommando.
 // Im Einzelspiel wird es sofort ausgefuehrt. Im Mehrspieler schickt ein
 // Mitspieler es an den Host, der es ausfuehrt und an alle verteilt. So sehen
@@ -17,7 +22,28 @@ public enum NetCommandType : byte
     Interact = 7,     // Schalter, Hebel ... bedienen
     AddCoal = 8,      // Kohle in einen Kessel werfen
     AddFuel = 9,      // Diesel in einen Generator fuellen
-    AddCharge = 10    // Kohle/Erz in einen Hochofen oder festes Metall in eine Giesserei werfen
+    AddCharge = 10,   // Kohle/Erz in einen Hochofen oder festes Metall in eine Giesserei werfen
+
+    // Eisenbahn
+    TrackBuild = 11,  // Gleisstueck bauen
+    TrackRemove = 12, // Gleisstueck entfernen
+    LocoSpawn = 13,   // Lok aufs Gleis setzen
+    LocoRemove = 14,  // Lok entfernen
+    LocoCoal = 15,    // Kohle in die Feuerbuechse einer Lok werfen
+    LocoFuel = 16,    // Diesel in den Tender einer Lok fuellen
+    StoreAdd = 17,    // Stueck in ein Lager (Schubkarre, Tender ...) aufnehmen
+    StoreTake = 18,   // Stueck aus einem Lager herausnehmen
+    BoomDrive = 19,   // Teleskop-Foerderband neigen / ausfahren
+    SwitchSet = 20,   // Weiche umlegen
+    TurntablePlace = 21,   // Drehscheibe aufstellen
+    TurntableRotate = 22,  // Bruecke auf einen Ausgang drehen
+    TurntableRemove = 23,  // Drehscheibe abbauen
+    Couple = 24,           // zwei Fahrzeuge zusammenkuppeln
+    Uncouple = 25,         // Fahrzeug abkuppeln
+    CarFunction = 26,      // Funktion an einem Fahrzeug (0 = Bodenklappe umschalten)
+    TrackShaft = 27,       // Entladeschacht in ein Gleis bauen
+    TrackShaftRemove = 28, // Entladeschacht entfernen
+    HoseAction = 29        // Schlauch: nehmen, ablegen, anschliessen, abziehen
 }
 
 // Ein Kommando. Es werden immer alle Felder uebertragen (klein genug);
@@ -125,6 +151,161 @@ public class NetCommand
             index = kind,
             prefab = metal ?? "",
             amount = mass
+        };
+    }
+
+    // ---------- Eisenbahn ----------
+
+    // Gleisstueck: Start (Punkt-Nummer oder 0 = neuer Punkt an startPos) bis Ende (ebenso).
+    // startYaw / endYaw (NaN = keine): feste Richtung an einem freien Punkt (Parallelgleise, Weichen).
+    // Sie stehen in flatYaw / flatBase; "index" sagt, welche gesetzt sind (1 = Start, 2 = Ende).
+    public static NetCommand TrackBuild(int startId, Vector3 startPos, int endId, Vector3 endPos,
+                                        float startYaw = float.NaN, float endYaw = float.NaN)
+    {
+        int flags = (float.IsNaN(startYaw) ? 0 : 1) | (float.IsNaN(endYaw) ? 0 : 2);
+
+        return new NetCommand
+        {
+            type = NetCommandType.TrackBuild,
+            idA = startId, position = startPos,
+            idB = endId, flatCenter = endPos,
+            flatYaw = float.IsNaN(startYaw) ? 0f : startYaw,
+            flatBase = float.IsNaN(endYaw) ? 0f : endYaw,
+            index = flags
+        };
+    }
+
+    // Weiche umlegen: nodeId = Punkt der Weiche, edgeId = Abzweig (kleiner als 0 = auf den anderen).
+    public static NetCommand SwitchSet(int nodeId, int edgeId)
+    {
+        return new NetCommand { type = NetCommandType.SwitchSet, idA = nodeId, idB = edgeId };
+    }
+
+    // Drehscheibe: Mitte, Richtung des Ausgangs 0 (Grad), Anzahl Ausgaenge, Halbmesser (Meter).
+    public static NetCommand TurntablePlace(Vector3 center, float baseYaw, int slots, float radius)
+    {
+        return new NetCommand
+        {
+            type = NetCommandType.TurntablePlace,
+            position = center, flatYaw = baseYaw, idA = slots, radius = radius
+        };
+    }
+
+    // Bruecke auf Ausgang "slot" drehen.
+    public static NetCommand TurntableRotate(int ttId, int slot)
+    {
+        return new NetCommand { type = NetCommandType.TurntableRotate, idA = ttId, idB = slot };
+    }
+
+    public static NetCommand TurntableRemove(int ttId)
+    {
+        return new NetCommand { type = NetCommandType.TurntableRemove, idA = ttId };
+    }
+
+    public static NetCommand TrackRemove(int edgeId)
+    {
+        return new NetCommand { type = NetCommandType.TrackRemove, idA = edgeId };
+    }
+
+    public static NetCommand LocoSpawn(int edge, float dist, int dir, int recipe)
+    {
+        return new NetCommand
+        {
+            type = NetCommandType.LocoSpawn,
+            idA = edge, amount = dist, portA = dir, index = recipe
+        };
+    }
+
+    // Kuppeln: Fahrzeug A (Ende ea: 0 vorne, 1 hinten) mit Fahrzeug B (Ende eb).
+    public static NetCommand Couple(int carA, int endA, int carB, int endB)
+    {
+        return new NetCommand
+        {
+            type = NetCommandType.Couple,
+            idA = carA, portA = endA, idB = carB, portB = endB
+        };
+    }
+
+    public static NetCommand Uncouple(int car, int end)
+    {
+        return new NetCommand { type = NetCommandType.Uncouple, idA = car, portA = end };
+    }
+
+    // Entladeschacht: Gleisstueck, Mitte (Meter) und Laenge (Meter, im Feld "radius").
+    public static NetCommand TrackShaft(int edge, float dist, float length)
+    {
+        return new NetCommand { type = NetCommandType.TrackShaft, idA = edge, amount = dist, radius = length };
+    }
+
+    public static NetCommand TrackShaftRemove(int edge, float dist)
+    {
+        return new NetCommand { type = NetCommandType.TrackShaftRemove, idA = edge, amount = dist };
+    }
+
+    // Schlauch: Trommel (idA), Aktion (portA: 0 nehmen, 1 ablegen, 2 anschliessen, 3 abziehen),
+    // Ziel beim Anschliessen (netId: 0 = Maschine, 1 = Fahrzeug; idB = Nummer; portB = Port-Nummer),
+    // Position beim Ablegen. Wer den Schlauch traegt, steht im Absender.
+    public static NetCommand HoseAction(int reel, int action, int targetKind, int targetId, int portIndex, Vector3 where)
+    {
+        return new NetCommand
+        {
+            type = NetCommandType.HoseAction,
+            idA = reel, portA = action, netId = targetKind, idB = targetId, portB = portIndex, position = where
+        };
+    }
+
+    public static NetCommand CarFunction(int car, int function)
+    {
+        return new NetCommand { type = NetCommandType.CarFunction, netId = car, index = function };
+    }
+
+    public static NetCommand LocoRemove(int carId)
+    {
+        return new NetCommand { type = NetCommandType.LocoRemove, netId = carId };
+    }
+
+    public static NetCommand LocoCoal(int carId)
+    {
+        return new NetCommand { type = NetCommandType.LocoCoal, netId = carId };
+    }
+
+    public static NetCommand LocoFuel(int carId, float liters)
+    {
+        return new NetCommand { type = NetCommandType.LocoFuel, netId = carId, amount = liters };
+    }
+
+    // Lager: domain 0 = Maschine/Szenenobjekt, 1 = loser Gegenstand (Schubkarre), 2 = Fahrzeug.
+    // id = Nummer des Besitzers, storageIndex = Nummer des Lagers darin.
+    // Stueck: "prefab|metall", kind = ItemKind, mass = Gewicht.
+    public static NetCommand StoreAdd(int domain, int id, int storageIndex,
+                                      string prefab, string metal, int kind, float mass)
+    {
+        return new NetCommand
+        {
+            type = NetCommandType.StoreAdd,
+            portA = domain, netId = id, idA = storageIndex,
+            prefab = prefab + "|" + (metal ?? ""), idB = kind, amount = mass
+        };
+    }
+
+    public static NetCommand StoreTake(int domain, int id, int storageIndex,
+                                       Vector3 position, Quaternion rotation)
+    {
+        return new NetCommand
+        {
+            type = NetCommandType.StoreTake,
+            portA = domain, netId = id, idA = storageIndex,
+            position = position, rotation = rotation
+        };
+    }
+
+    // function: 0 = Neigung, 1 = Laenge. delta: Wirkung des Hebels (Vorzeichen = Richtung, Betrag = Zeit in s).
+    public static NetCommand BoomDrive(int id, int beltIndex, int function, float delta)
+    {
+        return new NetCommand
+        {
+            type = NetCommandType.BoomDrive,
+            netId = id, idA = beltIndex, portA = function, amount = delta
         };
     }
 

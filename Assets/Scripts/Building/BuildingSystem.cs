@@ -12,6 +12,11 @@ public class BuildingSystem : MonoBehaviour
     public float gridSize = 1f;
     public int gridRadius = 10;
     public float gridLineHeight = 0.02f;
+    [Tooltip("An: Das Raster legt sich ueber das Gelaende der Voxel-Welt (folgt Huegeln und Mulden). " +
+             "Aus: flache Ebene in Hoehe 'Grid Line Height' (nur sinnvoll auf ebenem Boden).")]
+    public bool gridFollowsTerrain = true;
+    [Tooltip("So hoch (Meter) schwebt das Raster ueber dem Gelaende, damit es nicht im Boden versinkt.")]
+    public float gridTerrainOffset = 0.12f;
     public float gridLineWidth = 0.025f;
     public Color gridColor = new Color(0.2f, 0.8f, 1f, 0.65f);
     public KeyCode gridAnchorKey = KeyCode.T;
@@ -61,14 +66,24 @@ public class BuildingSystem : MonoBehaviour
     private Vector3 localBoundsExtents;
 
     private float placementOffset;
+    private Bounds localSolid;   // Umfang der festen Collider (Maschinen-Koordinaten), Zwischenwert beim Erzeugen der Vorschau
     private float currentRotation;
     private bool canPlace;
     private bool gridEnabled;
+
+    // Ist das Bau-Raster (G) gerade an? Das Gleisbau-Werkzeug rastet damit ein.
+    public bool GridEnabled { get { return gridEnabled; } }
 
     private int machinesLayer;
 
     private GameObject gridObject;
     private Material gridMaterial;
+
+    // Linien des Rasters mit ihren Ausgangspunkten (fuer das Anpassen ans Gelaende).
+    private readonly System.Collections.Generic.List<LineRenderer> gridLines = new System.Collections.Generic.List<LineRenderer>();
+    private readonly System.Collections.Generic.List<Vector3[]> gridLineBase = new System.Collections.Generic.List<Vector3[]>();
+    private Vector3 lastGridPosition = new Vector3(float.NaN, 0f, 0f);
+    private float nextGridTerrainUpdate;
 
     // Objekt, an dem sich das Gitter ausrichtet (null = Weltgitter).
     private Transform gridAnchor;
@@ -129,6 +144,7 @@ public class BuildingSystem : MonoBehaviour
         menuController.onMachineSelected = SelectMachine;
         menuController.onDemolishSelected = StartDemolish;
         menuController.onMoveSelected = StartMove;
+        menuController.onTrackSelected = StartTrack;
         menuController.Initialize();
         menuController.buildPanel.SetActive(false);
 
@@ -205,7 +221,7 @@ public class BuildingSystem : MonoBehaviour
         }
 
         // H schaltet das Anschuetten von Erde um (nur bei Platten und Waenden).
-        if (currentPiece != null && GameInput.KeyDown(backfillToggleKey))
+        if (currentPiece != null && GameInput.Pressed(GameAction.Backfill, backfillToggleKey))
             backfillTerrain = !backfillTerrain;
 
         // E dreht die Maschine nach rechts, Q nach links.
@@ -315,30 +331,13 @@ public class BuildingSystem : MonoBehaviour
             effectAudio.Stop();
         }
 
-        // Umfang aus allen festen Collidern berechnen.
-        // Trigger (z. B. Kohle-Einwurf) z‰hlen nicht mit.
-        bool hasBounds = false;
-        Bounds bounds = new Bounds(Vector3.zero, Vector3.zero);
+        // Umfang im Koordinatensystem der Maschine berechnen (unabhaengig von Drehung, Physik-Stand
+        // und abgeschalteten Collidern). Trigger (z. B. Kohle-Einwurf) zaehlen nicht mit.
+        bool hasBounds = ComputeLocalBounds(preview.transform, true, out localSolid);
 
-        foreach (Collider col in
-            preview.GetComponentsInChildren<Collider>())
-        {
-            if (!col.isTrigger)
-            {
-                if (!hasBounds)
-                {
-                    bounds = col.bounds;
-                    hasBounds = true;
-                }
-                else
-                {
-                    bounds.Encapsulate(col.bounds);
-                }
-            }
-
-            // Erst nach dem Auslesen ausschalten.
+        // Alle Collider der Vorschau ausschalten (erst nach dem Auslesen).
+        foreach (Collider col in preview.GetComponentsInChildren<Collider>())
             col.enabled = false;
-        }
 
         // Nur echte Modell-Renderer einfaerben (keine Partikel oder Linien).
         System.Collections.Generic.List<Renderer> modelRenderers =
@@ -353,36 +352,29 @@ public class BuildingSystem : MonoBehaviour
 
         previewRenderers = modelRenderers.ToArray();
 
+        Bounds bounds = localSolid;
+
         // Ersatz: Wenn es keinen festen Collider gibt, Renderer nutzen.
         if (!hasBounds)
         {
-            foreach (Renderer rend in previewRenderers)
-            {
-                if (!hasBounds)
-                {
-                    bounds = rend.bounds;
-                    hasBounds = true;
-                }
-                else
-                {
-                    bounds.Encapsulate(rend.bounds);
-                }
-            }
+            hasBounds = ComputeLocalBounds(preview.transform, false, out bounds);
 
             Debug.LogWarning(
-                "Das Maschinen-Prefab hat keinen festen Collider. " +
+                "[Bauen] Das Maschinen-Prefab '" + currentPrefab.name + "' hat keinen aktiven festen Collider. " +
                 "Es werden die Renderer-Maﬂe verwendet."
             );
+        }
+        else
+        {
+            WarnAboutBounds(bounds);
         }
 
         if (hasBounds)
         {
-            placementOffset =
-                preview.transform.position.y - bounds.min.y;
-
-            localBoundsCenter =
-                bounds.center - preview.transform.position;
-
+            // Alles relativ zum Modell-Nullpunkt: Die Unterkante liegt auf dem Boden,
+            // die Mitte ist der Drehpunkt.
+            placementOffset = -bounds.min.y;
+            localBoundsCenter = bounds.center;
             localBoundsExtents = bounds.extents;
         }
         else
@@ -1227,6 +1219,20 @@ public class BuildingSystem : MonoBehaviour
         CloseMenu();
     }
 
+    // Wird vom Baumenue-Button "Gleisbau" aufgerufen.
+    void StartTrack()
+    {
+        CancelPlacement();
+        CloseMenu();
+
+        TrackBuilder builder = FindObjectOfType<TrackBuilder>();
+
+        if (builder != null)
+            builder.Begin();
+        else
+            Debug.LogWarning("Gleisbau: Kein TrackBuilder in der Szene (Skript an den Spieler haengen).");
+    }
+
     // Wird vom Baumenue-Button "Umplatzieren" aufgerufen.
     void StartMove()
     {
@@ -1477,6 +1483,166 @@ public class BuildingSystem : MonoBehaviour
 
     // Berechnet den Umfang aller Modell-Teile im Koordinatensystem der Maschine.
     // Dazu werden die acht Ecken der Bounds jedes Mesh-Teils umgerechnet.
+    // Umfang der Maschine im eigenen Koordinatensystem (Massstab mitgerechnet, ohne Drehung).
+    // solidOnly: nur aktive, feste (Nicht-Trigger-)Collider; sonst alle Mesh-Renderer.
+    // Die Ecken jedes Teils werden einzeln umgerechnet, daher stimmt es auch bei gedrehten Unterobjekten.
+    static bool ComputeLocalBounds(Transform root, bool solidOnly, out Bounds result)
+    {
+        bool found = false;
+        result = new Bounds(Vector3.zero, Vector3.zero);
+        Vector3 scale = root.lossyScale;
+
+        if (solidOnly)
+        {
+            foreach (Collider col in root.GetComponentsInChildren<Collider>())
+            {
+                if (!col.enabled || col.isTrigger)
+                    continue;
+
+                Vector3 c, ext;
+
+                if (col is BoxCollider)
+                {
+                    BoxCollider bc = (BoxCollider)col;
+                    c = bc.center;
+                    ext = bc.size * 0.5f;
+                }
+                else if (col is SphereCollider)
+                {
+                    SphereCollider sc = (SphereCollider)col;
+                    c = sc.center;
+                    ext = Vector3.one * sc.radius;
+                }
+                else if (col is CapsuleCollider)
+                {
+                    CapsuleCollider cc = (CapsuleCollider)col;
+                    c = cc.center;
+                    ext = Vector3.one * cc.radius;
+                    float half = Mathf.Max(cc.height * 0.5f, cc.radius);
+
+                    if (cc.direction == 0) ext.x = half;
+                    else if (cc.direction == 1) ext.y = half;
+                    else ext.z = half;
+                }
+                else if (col is MeshCollider && ((MeshCollider)col).sharedMesh != null)
+                {
+                    Bounds mb = ((MeshCollider)col).sharedMesh.bounds;
+                    c = mb.center;
+                    ext = mb.extents;
+                }
+                else
+                {
+                    // Unbekannte Art: Welt-Bounds als Notloesung.
+                    EncapsulateWorld(root, scale, col.bounds, ref result, ref found);
+                    continue;
+                }
+
+                EncapsulateBox(root, scale, col.transform, c, ext, ref result, ref found);
+            }
+        }
+        else
+        {
+            foreach (Renderer rend in root.GetComponentsInChildren<Renderer>())
+            {
+                if (!(rend is MeshRenderer || rend is SkinnedMeshRenderer))
+                    continue;
+
+                MeshFilter mf = rend.GetComponent<MeshFilter>();
+
+                if (mf != null && mf.sharedMesh != null)
+                    EncapsulateBox(root, scale, rend.transform, mf.sharedMesh.bounds.center,
+                                   mf.sharedMesh.bounds.extents, ref result, ref found);
+                else
+                    EncapsulateWorld(root, scale, rend.bounds, ref result, ref found);
+            }
+        }
+
+        return found;
+    }
+
+    // Nimmt die acht Ecken einer Box (im Raum von "t") in den Umfang auf.
+    static void EncapsulateBox(Transform root, Vector3 scale, Transform t, Vector3 center, Vector3 extents,
+                               ref Bounds result, ref bool found)
+    {
+        for (int i = 0; i < 8; i++)
+        {
+            Vector3 sign = new Vector3(
+                (i & 1) == 0 ? -1f : 1f,
+                (i & 2) == 0 ? -1f : 1f,
+                (i & 4) == 0 ? -1f : 1f
+            );
+
+            Vector3 world = t.TransformPoint(center + Vector3.Scale(extents, sign));
+            Vector3 local = Vector3.Scale(root.InverseTransformPoint(world), scale);
+
+            if (!found)
+            {
+                result = new Bounds(local, Vector3.zero);
+                found = true;
+            }
+            else
+            {
+                result.Encapsulate(local);
+            }
+        }
+    }
+
+    static void EncapsulateWorld(Transform root, Vector3 scale, Bounds world, ref Bounds result, ref bool found)
+    {
+        EncapsulateBox(root, scale, root, root.InverseTransformPoint(world.center), Vector3.zero, ref result, ref found);
+        Vector3 c = world.center, e = world.extents;
+
+        for (int i = 0; i < 8; i++)
+        {
+            Vector3 sign = new Vector3((i & 1) == 0 ? -1f : 1f, (i & 2) == 0 ? -1f : 1f, (i & 4) == 0 ? -1f : 1f);
+            Vector3 local = Vector3.Scale(root.InverseTransformPoint(c + Vector3.Scale(e, sign)), scale);
+            result.Encapsulate(local);
+        }
+    }
+
+    // Meldet Prefab-Eigenheiten in der Konsole, die zu schwebenden oder falsch drehenden Maschinen fuehren.
+    void WarnAboutBounds(Bounds solid)
+    {
+        string name = currentPrefab != null ? currentPrefab.name : "?";
+
+        // 1) Collider-Mitte weit vom Nullpunkt: Die Maschine dreht sich um die Collider-Mitte, nicht um den Nullpunkt.
+        Vector2 off = new Vector2(solid.center.x, solid.center.z);
+
+        if (off.magnitude > 0.5f)
+            Debug.LogWarning("[Bauen] '" + name + "': Die Collider liegen " + off.magnitude.ToString("0.0") +
+                " m neben dem Modell-Nullpunkt. Gedreht wird um die Collider-Mitte. Pr¸fen, ob ein Collider " +
+                "(z. B. an einem Anschluss) ausserhalb des Modells liegt, und ihn ggf. zum Trigger machen.");
+
+        // 2) Unterkante der Collider und des Modells weichen ab: Maschine schwebt oder steckt im Boden.
+        Bounds visual;
+
+        if (ComputeLocalBounds(preview.transform, false, out visual))
+        {
+            float dy = solid.min.y - visual.min.y;
+
+            if (Mathf.Abs(dy) > 0.15f)
+                Debug.LogWarning("[Bauen] '" + name + "': Die Unterkante der Collider liegt " + dy.ToString("0.00") +
+                    " m " + (dy > 0f ? "¸ber" : "unter") + " der Unterkante des Modells. Die Maschine " +
+                    (dy > 0f ? "steckt im Boden." : "schwebt.") + " Collider an das Modell anpassen.");
+
+            Vector2 vc = new Vector2(visual.center.x - solid.center.x, visual.center.z - solid.center.z);
+
+            if (vc.magnitude > 0.75f)
+                Debug.LogWarning("[Bauen] '" + name + "': Modell und Collider sind seitlich um " +
+                    vc.magnitude.ToString("0.0") + " m gegeneinander versetzt.");
+        }
+
+        // 3) Skalierung oder Drehung des Wurzelobjekts.
+        Transform root = currentPrefab.transform;
+
+        if (root.localScale != Vector3.one)
+            Debug.LogWarning("[Bauen] '" + name + "': Das Wurzelobjekt ist skaliert (" + root.localScale +
+                "). Besser Maﬂstab 1 am Wurzelobjekt und das Modell darunter skalieren.");
+
+        if (Quaternion.Angle(root.rotation, Quaternion.identity) > 0.5f)
+            Debug.LogWarning("[Bauen] '" + name + "': Das Wurzelobjekt ist gedreht. Beim Bauen wird diese Drehung ersetzt.");
+    }
+
     bool TryGetLocalBounds(Transform machine, out Bounds result)
     {
         bool found = false;
@@ -1619,10 +1785,21 @@ public class BuildingSystem : MonoBehaviour
             lineObject.AddComponent<LineRenderer>();
 
         line.useWorldSpace = false;
-        line.positionCount = 2;
 
-        line.SetPosition(0, start);
-        line.SetPosition(1, end);
+        // Ein Punkt pro Rasterfeld, damit sich die Linie dem Gelaende anpassen kann.
+        int samples = Mathf.Max(2, Mathf.RoundToInt(Vector3.Distance(start, end) / Mathf.Max(0.01f, gridSize)) + 1);
+        Vector3[] basePoints = new Vector3[samples];
+
+        line.positionCount = samples;
+
+        for (int i = 0; i < samples; i++)
+        {
+            basePoints[i] = Vector3.Lerp(start, end, i / (float)(samples - 1));
+            line.SetPosition(i, basePoints[i]);
+        }
+
+        gridLines.Add(line);
+        gridLineBase.Add(basePoints);
 
         line.startWidth = gridLineWidth;
         line.endWidth = gridLineWidth;
@@ -1665,6 +1842,59 @@ public class BuildingSystem : MonoBehaviour
             position,
             rotation
         );
+
+        // Auf der Voxel-Welt liegt das Raster auf dem Gelaende (sonst laege es bei Hoehe 0 im Boden).
+        // Mit Anker bleibt es flach in Hoehe der Maschine.
+        VoxelWorld world = VoxelWorld.Instance;
+        bool followTerrain = gridFollowsTerrain && !UseAnchor && world != null && world.IsReady;
+
+        if (!followTerrain)
+        {
+            if (!float.IsNaN(lastGridPosition.x))
+            {
+                // Zurueck auf flach (z. B. nach dem Waehlen eines Ankers).
+                lastGridPosition = new Vector3(float.NaN, 0f, 0f);
+                ResetGridFlat();
+            }
+
+            return;
+        }
+
+        // Nur neu anpassen, wenn das Raster ein Feld weitergerutscht ist oder das Gelaende sich geaendert haben kann.
+        bool moved = float.IsNaN(lastGridPosition.x) || (position - lastGridPosition).sqrMagnitude > 0.0001f;
+
+        if (!moved && Time.unscaledTime < nextGridTerrainUpdate)
+            return;
+
+        lastGridPosition = position;
+        nextGridTerrainUpdate = Time.unscaledTime + 0.5f;
+
+        for (int l = 0; l < gridLines.Count; l++)
+        {
+            LineRenderer line = gridLines[l];
+            Vector3[] basePoints = gridLineBase[l];
+
+            for (int i = 0; i < basePoints.Length; i++)
+            {
+                Vector3 world3 = gridObject.transform.TransformPoint(basePoints[i]);
+                float surface = world.GetSurfaceWorldY(world3.x, world3.z);
+
+                // Hoehe relativ zum Rasterobjekt (die Drehung ist nur um Y, die Hoehe bleibt gleich).
+                line.SetPosition(i, new Vector3(basePoints[i].x, surface + gridTerrainOffset - position.y, basePoints[i].z));
+            }
+        }
+    }
+
+    // Setzt alle Rasterlinien wieder auf eine flache Ebene.
+    void ResetGridFlat()
+    {
+        for (int l = 0; l < gridLines.Count; l++)
+        {
+            Vector3[] basePoints = gridLineBase[l];
+
+            for (int i = 0; i < basePoints.Length; i++)
+                gridLines[l].SetPosition(i, basePoints[i]);
+        }
     }
 
     // Ist ein Ankerobjekt gewaehlt (und das Gitter an), gilt dessen
@@ -1695,7 +1925,7 @@ public class BuildingSystem : MonoBehaviour
     }
 
     // Rastet eine Weltposition am (ggf. ausgerichteten) Gitter ein.
-    Vector3 SnapToGrid(Vector3 position)
+    public Vector3 SnapToGrid(Vector3 position)
     {
         Vector3 origin = GetGridOrigin();
         Quaternion rotation = GetGridRotation();

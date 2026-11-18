@@ -13,6 +13,22 @@ public class RemotePlayer : MonoBehaviour
         new Color(0.9f, 0.8f, 0.3f)
     };
 
+    // Alle Mitspieler-Figuren nach Spieler-Nummer (zum Nachschlagen, z. B. wer den Schlauch traegt).
+    private static readonly System.Collections.Generic.Dictionary<int, RemotePlayer> all =
+        new System.Collections.Generic.Dictionary<int, RemotePlayer>();
+
+    public static RemotePlayer Find(int id)
+    {
+        RemotePlayer p;
+        return all.TryGetValue(id, out p) && p != null ? p : null;
+    }
+
+    void OnDestroy()
+    {
+        if (all.ContainsKey(PlayerId) && all[PlayerId] == this)
+            all.Remove(PlayerId);
+    }
+
     public int PlayerId { get; private set; }
     public string PlayerName { get; set; }
 
@@ -29,6 +45,7 @@ public class RemotePlayer : MonoBehaviour
         RemotePlayer player = root.AddComponent<RemotePlayer>();
         player.PlayerId = id;
         player.PlayerName = playerName;
+        all[id] = player;
 
         Color color = colors[Mathf.Abs(id) % colors.Length];
 

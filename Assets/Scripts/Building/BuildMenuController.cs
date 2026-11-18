@@ -40,6 +40,7 @@ public class BuildMenuController : MonoBehaviour
     public Action<GameObject> onMachineSelected;
     public Action onDemolishSelected;
     public Action onMoveSelected;
+    public Action onTrackSelected;   // Gleisbau (Button erscheint nur, wenn gesetzt)
 
     private Font uiFont;
 
@@ -47,6 +48,7 @@ public class BuildMenuController : MonoBehaviour
     private readonly Color machineColor = new Color(0.22f, 0.25f, 0.29f);
     private readonly Color demolishColor = new Color(0.55f, 0.20f, 0.18f);
     private readonly Color moveColor = new Color(0.18f, 0.36f, 0.55f);
+    private readonly Color trackColor = new Color(0.35f, 0.28f, 0.16f);
 
     private bool initialized;
 
@@ -258,6 +260,15 @@ public class BuildMenuController : MonoBehaviour
             if (onMoveSelected != null)
                 onMoveSelected();
         });
+
+        if (onTrackSelected != null)
+        {
+            CreateButton(Loc.T("build.track"), trackColor, () =>
+            {
+                if (onTrackSelected != null)
+                    onTrackSelected();
+            });
+        }
 
         if (machinePrefabs == null)
             return;

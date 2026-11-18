@@ -29,7 +29,7 @@ public class FurnaceInlet : MonoBehaviour
         ItemTag tag = other.GetComponentInParent<ItemTag>();
 
         // Dieselkanister gehoeren nicht in den Ofen.
-        if (pickup is FuelCanister)
+        if (pickup is FuelCanister || pickup is DigTool)
             return;
 
         // Ohne Markierung gilt ein Gegenstand als Kohle (nur wenn man ihn aufheben kann).

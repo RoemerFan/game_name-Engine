@@ -20,7 +20,7 @@ using UnityEngine;
 //     sonst bremst die Reibung die Gegenstaende ein wenig.
 //  4. Optional: "Belt Renderer" fuer die Band-Animation (die Textur laeuft mit),
 //     Seitenwaende als eigene Collider, Port "Power" fuer den Strom.
-public class ConveyorBelt : MonoBehaviour, IPowerConsumer
+public class ConveyorBelt : MonoBehaviour, IPowerConsumer, IShaftDriven
 {
     [Header("Aufbau")]
     [Tooltip("Box Collider der Bandflaeche. Leer = erster fester Box Collider unter dem Band.")]
@@ -81,9 +81,12 @@ public class ConveyorBelt : MonoBehaviour, IPowerConsumer
 
     private bool IsOn => machineSwitch == null || machineSwitch.IsOn;
 
+    // Laeuft das Band ueber eine Welle (siehe ShaftDrive)? Dann zaehlt der Strom nicht.
+    private bool mechanical;
+
     // Wenig Verbrauch bei leerem Band, mehr mit Last.
     public float DemandKW =>
-        IsOn
+        IsOn && !mechanical
             ? Mathf.Lerp(idlePowerKW, ratedPowerKW,
                 Mathf.Clamp01(itemCount / Mathf.Max(1f, fullLoadItems)))
             : 0f;
@@ -94,7 +97,25 @@ public class ConveyorBelt : MonoBehaviour, IPowerConsumer
 
     public void SetSupply(float fraction)
     {
+        // Mit Wellenantrieb gilt die Welle, nicht der Strom.
+        if (mechanical)
+            return;
+
         supply = Mathf.Clamp01(fraction);
+    }
+
+    // ---------- Wellenantrieb (IShaftDriven) ----------
+
+    public bool ShaftOn => IsOn;
+
+    public float ShaftLoad01 => Mathf.Clamp01(itemCount / Mathf.Max(1f, fullLoadItems));
+
+    public void SetShaftSupply(float fraction, bool active)
+    {
+        mechanical = active;
+
+        if (active)
+            supply = Mathf.Clamp01(fraction);
     }
 
     private void Awake()
@@ -257,7 +278,11 @@ public class ConveyorBelt : MonoBehaviour, IPowerConsumer
         if (!showDebugInfo)
             return;
 
-        Camera cam = Camera.main;
+        // Kamera: die vom TrackManager (Player Camera), sonst die mit dem Tag "MainCamera".
+        Camera cam = TrackManager.Instance != null ? TrackManager.Instance.PlayerCamera : null;
+
+        if (cam == null)
+            cam = Camera.main;
 
         if (cam == null)
             return;

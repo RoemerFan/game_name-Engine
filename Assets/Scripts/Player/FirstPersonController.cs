@@ -148,9 +148,13 @@ public class FirstPersonController : MonoBehaviour
     // Laufen: Tastatur (WASD) und linker Stick, zusammen auf Laenge 1 begrenzt.
     Vector2 ReadMoveInput()
     {
-        Vector2 input = new Vector2(
-            Input.GetAxisRaw("Horizontal"),
-            Input.GetAxisRaw("Vertical"));
+        // Tasten laut Belegung in den Einstellungen (Standard WASD).
+        Vector2 input = Vector2.zero;
+
+        if (GameInput.Held(GameAction.MoveRight, KeyCode.D)) input.x += 1f;
+        if (GameInput.Held(GameAction.MoveLeft, KeyCode.A)) input.x -= 1f;
+        if (GameInput.Held(GameAction.MoveForward, KeyCode.W)) input.y += 1f;
+        if (GameInput.Held(GameAction.MoveBack, KeyCode.S)) input.y -= 1f;
 
 #if ENABLE_INPUT_SYSTEM
         Gamepad pad = Gamepad.current;
@@ -169,17 +173,8 @@ public class FirstPersonController : MonoBehaviour
 
     bool ReadJumpPressed()
     {
-        if (Input.GetKeyDown(KeyCode.Space))
-            return true;
-
-#if ENABLE_INPUT_SYSTEM
-        Gamepad pad = Gamepad.current;
-
-        if (pad != null && pad.buttonSouth.wasPressedThisFrame)
-            return true;
-#endif
-
-        return false;
+        // Taste und Controller-Knopf laut Belegung (Standard: Leertaste / Kreuz bzw. A).
+        return GameInput.Pressed(GameAction.Jump, KeyCode.Space);
     }
 
     void MovePlayer()

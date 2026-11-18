@@ -16,6 +16,8 @@ public class PipeBuilder : MonoBehaviour
     [Header("Leitung")]
     [SerializeField] private float pipeRadius = 0.05f;
     [SerializeField] private float cableRadius = 0.02f;
+    [Tooltip("Dicke (Radius) einer Welle in Metern.")]
+    [SerializeField] private float shaftRadius = 0.07f;
     [Tooltip("Maximale Leistung eines Kabels in kW (gilt fuer neu gebaute Kabel).")]
     [SerializeField] private float cableRatingKW = 50f;
     [Tooltip("Nach wie vielen Sekunden brennt ein Kabel bei doppelter Last durch?")]
@@ -76,7 +78,10 @@ public class PipeBuilder : MonoBehaviour
         if (SettingsMenu.IsOpen)
             return;
 
-        if (GameInput.Pressed(GameAction.PipeMode, toggleKey) && !IsBuildMenuOpen())
+        // Das Steuerkreuz (oben) wird auch vom Gleis-Werkzeug und beim Lok-Fahren benutzt: dann ignorieren.
+        bool padBusy = GameInput.UsingGamepad && (TrackBuilder.AnyActive || Locomotive.IsDriving);
+
+        if (!padBusy && GameInput.Pressed(GameAction.PipeMode, toggleKey) && !IsBuildMenuOpen())
             SetPipeMode(!pipeMode);
 
         if (!pipeMode)
@@ -92,7 +97,7 @@ public class PipeBuilder : MonoBehaviour
         Vector3 aimPoint;
         hoveredPort = FindPortUnderCrosshair(out aimPoint);
 
-        if (GameInput.Pressed(GameAction.PipeRemove, removeKey) &&
+        if (GameInput.Pressed(GameAction.Remove, removeKey) &&
             hoveredPort != null && hoveredPort.IsConnected)
         {
             int removeId, removeIndex;
@@ -317,7 +322,8 @@ public class PipeBuilder : MonoBehaviour
 
         float radius =
             small ? smallCableRadius :
-            a.Medium == PortMedium.Power ? cableRadius : pipeRadius;
+            a.Medium == PortMedium.Power ? cableRadius :
+            a.Medium == PortMedium.Shaft ? shaftRadius : pipeRadius;
 
         // Die Leitung wird als weich gebogenes Rohr gebaut.
         // Nur Kabel haengen durch, Rohre bleiben starr.
@@ -380,6 +386,8 @@ public class PipeBuilder : MonoBehaviour
                 return new Color(0.95f, 0.75f, 0.1f);
             case PortMedium.Melt:
                 return new Color(1f, 0.45f, 0.1f);
+            case PortMedium.Shaft:
+                return new Color(0.5f, 0.52f, 0.56f);
             default:
                 return new Color(0.2f, 0.18f, 0.17f);
         }
@@ -451,7 +459,7 @@ public class PipeBuilder : MonoBehaviour
             return;
 
         string text =
-            Loc.T("pipe.hint", GameInput.Hint(GameAction.PipeMode, toggleKey), GameInput.Hint(GameAction.PipeRemove, removeKey)) + "\n" +
+            Loc.T("pipe.hint", GameInput.Hint(GameAction.PipeMode, toggleKey), GameInput.Hint(GameAction.Remove, removeKey)) + "\n" +
             Loc.T(firstPort == null ? "pipe.hint.first" : "pipe.hint.second");
 
         if (hoveredPort != null)
@@ -474,7 +482,8 @@ public class PipeBuilder : MonoBehaviour
             port.Medium == PortMedium.Water ? "medium.water" :
             port.Medium == PortMedium.Steam ? "medium.steam" :
             port.Medium == PortMedium.Power ? "medium.power" :
-            port.Medium == PortMedium.Melt ? "medium.melt" : "medium.soot");
+            port.Medium == PortMedium.Melt ? "medium.melt" :
+            port.Medium == PortMedium.Shaft ? "medium.shaft" : "medium.soot");
 
         string direction = Loc.T(
             port.Direction == PortDirection.Input ? "port.input" :
@@ -499,6 +508,9 @@ public class PipeBuilder : MonoBehaviour
 
             return info;
         }
+
+        if (port.Medium == PortMedium.Shaft)
+            return Loc.T("pipe.port.shaft", medium, state, ShaftGrid.RpmAt(port).ToString("F0"));
 
         return Loc.T("pipe.port.flow", medium, direction, state);
     }

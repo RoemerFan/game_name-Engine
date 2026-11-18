@@ -15,7 +15,10 @@ public enum PortMedium
     // Fluessiges Metall (Schmelze). Anders als Wasser hat sie eine Metallart und eine
     // Temperatur, deshalb gibt es dafuer die Schnittstelle IMeltOwner (siehe Metals/MetalRegistry).
     // Schmelze-Ports passen nicht an universelle Ports.
-    Melt
+    Melt,
+
+    // Mechanische Welle (Drehzahl und Drehmoment, siehe ShaftGrid). Wie Strom beidseitig, passt nicht an universelle Ports.
+    Shaft
 }
 
 public enum PortDirection
@@ -93,7 +96,7 @@ public class Port : MonoBehaviour
     public UniversalJunction Junction => junction;
     // Strom-Ports sind immer beidseitig; bei Wasser/Dampf/Russ gilt der Inspector-Wert.
     public PortDirection Direction =>
-        (medium == PortMedium.Power || medium == PortMedium.Any)
+        (medium == PortMedium.Power || medium == PortMedium.Any || medium == PortMedium.Shaft)
             ? PortDirection.Both
             : direction;
     // Kabelstaerke (nur bei Strom-Ports von Bedeutung).
@@ -101,6 +104,21 @@ public class Port : MonoBehaviour
     public IPortOwner Owner => owner;
     public Port Connected { get; private set; }
     public bool IsConnected => Connected != null;
+
+    // Maximale Menge pro Sekunde (nur Ausgaenge). Fuer Ports, die per Skript angelegt werden (z. B. Schlauchduese).
+    public float MaxFlowPerSecond
+    {
+        get { return maxFlowPerSecond; }
+        set { maxFlowPerSecond = value; }
+    }
+
+    // Stellt Stoff, Richtung und Durchfluss per Skript ein (fuer Ports, die zur Laufzeit entstehen).
+    public void Configure(PortMedium newMedium, PortDirection newDirection, float newMaxFlow)
+    {
+        medium = newMedium;
+        direction = newDirection;
+        maxFlowPerSecond = newMaxFlow;
+    }
 
     // Das Kabel, das an diesem Power-Port haengt (vom PipeBuilder gesetzt).
     public Pipe Cable { get; set; }
@@ -131,7 +149,7 @@ public class Port : MonoBehaviour
         if (medium == PortMedium.Power || medium == PortMedium.Any)
             PowerPlugVisual.Attach(this);
 
-        if (owner == null && medium != PortMedium.Power && medium != PortMedium.Any)
+        if (owner == null && medium != PortMedium.Power && medium != PortMedium.Any && medium != PortMedium.Shaft)
         {
             Debug.LogWarning(
                 "Port hat keine Maschine als Besitzer!",
@@ -151,7 +169,7 @@ public class Port : MonoBehaviour
             return;
         }
 
-        if (current == PortMedium.Power || current == PortMedium.Any)
+        if (current == PortMedium.Power || current == PortMedium.Any || current == PortMedium.Shaft)
             return;
 
         // Nur Ausgaenge (und universelle Ports) schieben Material in die
@@ -213,6 +231,20 @@ public class Port : MonoBehaviour
     }
 
     // Pruefen, ob zwei Ports verbunden werden duerfen.
+    // Groesster Winkel (Grad) zwischen Port-Achse und Wellenrichtung (Kardangelenk).
+    public const float MaxShaftJointAngle = 45f;
+
+    private bool ShaftAngleOk(Port other)
+    {
+        Vector3 line = other.transform.position - transform.position;
+
+        if (line.sqrMagnitude < 0.0001f)
+            return true;
+
+        return Vector3.Angle(transform.forward, line) <= MaxShaftJointAngle
+            && Vector3.Angle(other.transform.forward, -line) <= MaxShaftJointAngle;
+    }
+
     public bool CanConnect(Port other)
     {
         if (other == null
@@ -239,6 +271,14 @@ public class Port : MonoBehaviour
 
         // Schmelze passt nur an Schmelze (ein universeller Port kennt keine Metallart).
         if (result == PortMedium.Melt && (mine == PortMedium.Any || theirs == PortMedium.Any))
+            return false;
+
+        // Eine wellenfuehrende Verbindung geht nur zwischen zwei festen Wellen-Ports.
+        if (result == PortMedium.Shaft && (mine == PortMedium.Any || theirs == PortMedium.Any))
+            return false;
+
+        // Wellen laufen gerade von Gelenk zu Gelenk: Zu steile Winkel zur Port-Achse gehen nicht.
+        if (result == PortMedium.Shaft && !ShaftAngleOk(other))
             return false;
 
         // Strom ist immer beidseitig. Bei Wasser/Dampf/Russ muss Ein- an Ausgang

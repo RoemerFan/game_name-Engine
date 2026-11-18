@@ -215,6 +215,7 @@ GameObject:
   - component: {fileID: 3839577392550504076}
   - component: {fileID: 8067638769818225186}
   - component: {fileID: 8815975946259840729}
+  - component: {fileID: 5134115672905975422}
   m_Layer: 0
   m_Name: Wheelbarrow
   m_TagString: Untagged
@@ -241,6 +242,7 @@ Transform:
   - {fileID: 4055006830018276882}
   - {fileID: 7939861663118456142}
   - {fileID: 6677732325351433480}
+  - {fileID: 7276825793730666518}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!54 &3839577392550504076
@@ -282,7 +284,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e32ec4b0f4d4ce4458a3a6f29d819149, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  categoryId: 
   category: 0
+  displayName: 
 --- !u!114 &8815975946259840729
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -312,6 +316,27 @@ MonoBehaviour:
   maxLoadKg: 80
   loadedSpeedFactor: 0.5
   emptySpeedFactor: 0.85
+--- !u!114 &5134115672905975422
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3192953445695648501}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe012af12a0a38641a56bdef3777506b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  zone: {fileID: 1149919416780176468}
+  accepts: 00000000010000000200000003000000
+  maxItems: 30
+  maxMassKg: 0
+  takeFrom: []
+  pileCenter: {fileID: 7276825793730666518}
+  pileSize: {x: 0.6, y: 0.25, z: 0.6}
+  piecesPerLayer: 4
+  layerHeight: 0.1
 --- !u!1 &4129419677647653885
 GameObject:
   m_ObjectHideFlags: 0
@@ -365,6 +390,37 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.05, y: 0.7, z: 1}
   m_Center: {x: -0.45, y: 0, z: -0.475}
+--- !u!1 &4330444280513654270
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7276825793730666518}
+  m_Layer: 0
+  m_Name: Pile Center
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7276825793730666518
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4330444280513654270}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -13.01, y: 1.49, z: 30.02}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4270043848840669440}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &5240435112040935460
 GameObject:
   m_ObjectHideFlags: 0

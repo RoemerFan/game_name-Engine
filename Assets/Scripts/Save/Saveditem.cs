@@ -36,6 +36,12 @@ public class SavedItem : MonoBehaviour, ISaveable
         if (canister != null)
             bag.SetFloat("liters", canister.Liters);
 
+        // Werkzeug: Haltbarkeit merken.
+        DigTool tool = GetComponent<DigTool>();
+
+        if (tool != null)
+            bag.SetFloat("durability", tool.Durability);
+
         // Art des Gegenstands (Erz, Barren, Schlacke) merken.
         ItemTag tag = GetComponent<ItemTag>();
 
@@ -53,6 +59,11 @@ public class SavedItem : MonoBehaviour, ISaveable
 
         if (canister != null)
             canister.Liters = bag.GetFloat("liters", canister.Liters);
+
+        DigTool tool = GetComponent<DigTool>();
+
+        if (tool != null)
+            tool.Durability = bag.GetFloat("durability", tool.Durability);
 
         // Markierung wiederherstellen (das Prefab selbst hat sie evtl. nicht).
         float kind = bag.GetFloat("kind", -1f);

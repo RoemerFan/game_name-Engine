@@ -66,7 +66,13 @@ public class VoxelWorld : MonoBehaviour
     [Tooltip("So tief unter der Oberflaeche beginnen Hoehlen (Meter).")]
     public float caveMinDepthMeters = 2.5f;
 
-    [Header("Kohle")]
+    [Header("Vorkommen (Kohle, Eisen ...)")]
+    [Tooltip("An: Erze entstehen als echte Vorkommen mit Groesse, Region und Floezen (siehe OreDeposits). " +
+             "Aus: die alte Erzverteilung mit den Rausch-Werten darunter (Kohle / Eisen).")]
+    public bool useDeposits = true;
+    public DepositSettings deposits = new DepositSettings();
+
+    [Header("Kohle (alte Verteilung, nur wenn 'Use Deposits' aus ist)")]
     public float coalScale = 0.2f;
     [Tooltip("Hoeher = weniger Kohle im Untergrund.")]
     public float coalThreshold = 0.64f;
@@ -168,6 +174,8 @@ public class VoxelWorld : MonoBehaviour
     // gespeicherte Welten auch dann laden lassen, wenn das Objekt verschoben wurde.
     const byte OpDig = 1;        // Kugel graben:    c = Mitte, p0 = Radius
     const byte OpFlatten = 2;    // Einebnen:        c, half (schon vergroessert), yaw, p0 = Hoehe (mit Versenkung), p1 = Ueberblendung
+    const byte OpRamp = 5;       // Rampe in die Grube: c = Mitte (x, z), c.y = Abstand vom Rampenanfang zur Mitte, half = (Reichweite von der Mitte, halbe Breite), yaw = Richtung, p0 = Hoehe am Anfang, p1 = Boeschung, p2 = Steigung
+    const byte OpPit = 4;        // Tagebau-Grube:  c, half, yaw (Ellipse), p0 = Abbauhoehe (lokales Y), p1 = Boeschungsbreite
     const byte OpBackfill = 3;   // Boeschung:       c, half, yaw, p0 = Niveau, p1 = Reichweite, p2 = Steigung
 
     struct Op
@@ -250,6 +258,164 @@ public class VoxelWorld : MonoBehaviour
     public event System.Action<Vector3, Vector3> ColumnGenerating;
 
     float[] noiseOffsets = new float[24];
+
+    // Vorkommen (Kohle, Eisen ...). Null = alte Erzverteilung.
+    OreDeposits ore;
+    readonly List<Deposit> columnDeposits = new List<Deposit>();
+
+    // Die Vorkommen der Welt: fuer Dorf-Produktion, NPC-Fabriken, Karte ...
+    public OreDeposits Ore { get { return ore; } }
+
+    // Vorkommen im Umkreis (Meter) um eine Weltposition, nach Entfernung sortiert.
+    // block = null: alle Arten. Gibt auch Vorkommen zurueck, deren Gelaende noch nicht geladen ist.
+    public List<Deposit> FindDeposits(Vector3 worldPosition, float radius, BlockType? block)
+    {
+        if (ore == null)
+            return new List<Deposit>();
+
+        Vector3 l = worldPosition - transform.position;
+        List<Deposit> found = ore.Query(l.x, l.z, radius, block);
+
+        // In Weltkoordinaten umrechnen (die Mitte wird im Gelaende-System gefuehrt).
+        for (int i = 0; i < found.Count; i++)
+        {
+            Deposit d = found[i];
+            d.center += transform.position;
+            found[i] = d;
+        }
+
+        return found;
+    }
+
+    // ---------- Tagebau (Abbau durch Doerfer) ----------
+
+    // Letzte Abbauhoehe, fuer die die Grube ins Gelaende geschnitten wurde (pro Vorkommen).
+    readonly Dictionary<long, float> lastPitCut = new Dictionary<long, float>();
+
+    // Ein Dorf foerdert Material aus einem Vorkommen (volumeM3 Kubikmeter). Das Vorkommen muss von FindDeposits
+    // stammen. Gibt zurueck, wie viel wirklich gefoerdert wurde (weniger, wenn nur noch wenig bis zur maximalen
+    // Grubentiefe da ist). Das Vorkommen wird von oben abgetragen; die Grube im Gelaende wird in Stufen
+    // ("Pit Step Meters") tiefer und ist auch in noch nicht geladenen Bereichen gespeichert.
+    public float MineDeposit(Deposit deposit, float volumeM3, float rampYawDeg = float.NaN)
+    {
+        if (ore == null || !IsReady)
+            return 0f;
+
+        float taken = ore.Mine(deposit.id, deposit.volumeM3, deposit.reachableM3, volumeM3);
+
+        if (taken <= 0f)
+            return 0f;
+
+        // Das Vorkommen mit dem neuen Abbaustand holen (Gelaende-Koordinaten).
+        Vector3 o = transform.position;
+        List<Deposit> found = ore.Query(deposit.center.x - o.x, deposit.center.z - o.z, 2f, deposit.block);
+        int index = found.FindIndex(q => q.id == deposit.id);
+
+        if (index < 0)
+            return taken;
+
+        Deposit cur = found[index];
+
+        float last;
+
+        if (!lastPitCut.TryGetValue(cur.id, out last))
+            last = float.MaxValue;
+
+        // Erst eine neue Stufe schneiden, wenn die Abbauhoehe weit genug gesunken ist.
+        if (cur.cutY < last - Mathf.Max(0.1f, deposits.pitStepMeters) || (last == float.MaxValue && cur.cutY < cur.surfaceY))
+        {
+            lastPitCut[cur.id] = cur.cutY;
+            CarvePit(cur, rampYawDeg);
+        }
+
+        return taken;
+    }
+
+    // Schneidet die Grube fuer den aktuellen Abbaustand ins Gelaende (Deposit in Gelaende-Koordinaten).
+    void CarvePit(Deposit d, float rampYawDeg)
+    {
+        Vector2 half;
+        float cutY;
+
+        if (!OreDeposits.PitFootprint(d, out half, out cutY))
+            return;
+
+        float depth = Mathf.Max(0f, d.surfaceY - cutY);
+        float blend = Mathf.Clamp(depth * 1.2f, 1.5f, 8f);
+
+        Op op = new Op();
+        op.type = OpPit;
+        op.c = new Vector3(d.center.x, cutY, d.center.z);
+        op.half = half + new Vector2(blend * 0.4f, blend * 0.4f);
+        op.yaw = d.yawDeg;
+        op.p0 = cutY;
+        op.p1 = blend;
+
+        Commit(op, null);
+
+        // Zufahrtsrampe: wird mit jeder Stufe nachgearbeitet und verlaengert.
+        if (deposits.rampMode == PitRampMode.Linear && depth > 0.3f)
+        {
+            // Standard: quer zur Hauptachse des Vorkommens.
+            float rampYaw = float.IsNaN(rampYawDeg) ? d.yawDeg + 90f : rampYawDeg;
+
+            // Abstand von der Mitte bis zum Rand der Grubensohle in Rampenrichtung (Ellipse).
+            float phi = (rampYaw - d.yawDeg) * Mathf.Deg2Rad;
+            float a = Mathf.Max(0.5f, half.x);
+            float b = Mathf.Max(0.5f, half.y);
+            float cx = Mathf.Cos(phi) / a;
+            float sx = Mathf.Sin(phi) / b;
+            float s0 = 1f / Mathf.Sqrt(cx * cx + sx * sx);
+
+            float gradient = Mathf.Max(0.01f, deposits.rampGradientPercent * 0.01f);
+
+            // Bis das Gelaende (mit Huegeln) erreicht ist.
+            float length = (d.surfaceY + 4f - cutY) / gradient + blend;
+
+            Op ramp = new Op();
+            ramp.type = OpRamp;
+            ramp.c = new Vector3(d.center.x, s0, d.center.z);
+            ramp.half = new Vector2(s0 + length, Mathf.Max(1.5f, deposits.rampWidthMeters * 0.5f));
+            ramp.yaw = rampYaw;
+            ramp.p0 = cutY;
+            ramp.p1 = blend;
+            ramp.p2 = gradient;
+
+            Commit(ramp, null);
+        }
+    }
+
+    // Hilfsfunktion fuer die Vorkommen: Oberflaechenhoehe an einem Ort (Meter ueber der Weltecke).
+    float SurfaceHeightAt(float mx, float mz)
+    {
+        float h, o;
+        HeightAt(mx, mz, out h, out o);
+        return h;
+    }
+
+    // Zum Testen: Rechtsklick auf die VoxelWorld-Komponente im Inspector (im Spiel) listet die Vorkommen
+    // im Umkreis von 400 m um den Spieler in der Konsole auf.
+    [ContextMenu("Vorkommen in der Naehe auflisten")]
+    void ListNearbyDeposits()
+    {
+        if (ore == null)
+        {
+            Debug.Log("Keine Vorkommen aktiv (Use Deposits aus oder Spiel nicht gestartet).");
+            return;
+        }
+
+        Vector3 here = player != null ? player.position : SpawnPoint();
+
+        foreach (Deposit d in FindDeposits(here, 400f, null))
+        {
+            Debug.Log(d.typeName + " (" + d.block + "): " + Vector3.Distance(new Vector3(here.x, 0f, here.z),
+                      new Vector3(d.center.x, 0f, d.center.z)).ToString("F0") + " m entfernt, Halbmesser " +
+                      d.radiusMajor.ToString("F0") + " x " + d.radiusMinor.ToString("F0") + " m, Dicke " +
+                      (d.radiusVertical * 2f).ToString("F1") + " m, ca. " + d.remainingM3.ToString("F0") + " von " +
+                      d.volumeM3.ToString("F0") + " m3 uebrig" +
+                      (d.outcrops ? ", an der Oberflaeche sichtbar" : ""));
+        }
+    }
 
     Material terrainMaterial;
     Texture2D[] textures = new Texture2D[MaterialCount];
@@ -335,6 +501,15 @@ public class VoxelWorld : MonoBehaviour
 
         for (int i = 0; i < noiseOffsets.Length; i++)
             noiseOffsets[i] = (float)rnd.NextDouble() * 1000f;
+
+        // Vorkommen vorbereiten (inklusive garantierter Startvorkommen).
+        if (useDeposits)
+        {
+            ore = new OreDeposits(deposits, seed, SurfaceHeightAt);
+
+            Vector3 spawnLocal = SpawnPoint() - transform.position;
+            ore.AddStartDeposits(spawnLocal.x, spawnLocal.z);
+        }
 
         CreateMaterials();
 
@@ -513,6 +688,13 @@ public class VoxelWorld : MonoBehaviour
             }
         }
 
+        // Vorkommen, die diese Spalte beruehren koennten (einmal pro Spalte, nicht pro Punkt).
+        if (ore != null)
+        {
+            ore.Collect(x0 * cellSize, z0 * cellSize,
+                        (x0 + ChunkCells) * cellSize, (z0 + ChunkCells) * cellSize, columnDeposits);
+        }
+
         // Schritt 2: Dichte und Material jedes Gitterpunkts
         for (int lz = 0; lz < ChunkCells; lz++)
         {
@@ -589,8 +771,19 @@ public class VoxelWorld : MonoBehaviour
         else if (depth < dirtDepthMeters) type = BlockType.Dirt;
         else type = BlockType.Stone;
 
+        if (ore != null)
+        {
+            // Neue Vorkommen: Erz, wo ein Vorkommen liegt (auch an der Oberflaeche, wenn es bis oben reicht).
+            if (columnDeposits.Count > 0)
+            {
+                int found = ore.BlockAt(columnDeposits, mx, my, mz, type);
+
+                if (found >= 0)
+                    type = (BlockType)found;
+            }
+        }
         // Kohle an der Oberflaeche (ueber Tage)
-        if (depth < coalOutcropDepthMeters && outcrop > coalOutcropThreshold)
+        else if (depth < coalOutcropDepthMeters && outcrop > coalOutcropThreshold)
         {
             type = BlockType.Coal;
         }
@@ -1280,6 +1473,64 @@ public class VoxelWorld : MonoBehaviour
         RebuildDirtyNow();
     }
 
+    // Ein Abschnitt eines Weges (z. B. Gleisbett), der eingeebnet werden soll.
+    public struct PathBox
+    {
+        public Vector3 center;   // Mitte in Weltkoordinaten
+        public Vector2 half;     // x = halbe Breite (quer), y = halbe Laenge (laengs)
+        public float yaw;        // Drehung in Grad (Blickrichtung des Abschnitts)
+        public float baseY;      // Zielhoehe der Oberflaeche (Welt-Y)
+    }
+
+    // Ebnet einen ganzen Weg in einem Rutsch ein (Gleise, Strassen ...):
+    //  1) alle Abschnitte werden eingeebnet,
+    //  2) danach (optional) als Boeschung an das Gelaende angepasst,
+    //  3) die Chunks werden nur EINMAL neu berechnet - das ist viel schneller, als
+    //     FlattenArea fuer jeden Abschnitt einzeln aufzurufen.
+    // backfillEvery: nur jeder n-te Abschnitt bekommt eine Boeschung (spart Operationen).
+    public void FlattenPath(List<PathBox> boxes, float blend,
+                            float backfillReach, float backfillSlope, int backfillEvery)
+    {
+        if (!IsReady || boxes == null || boxes.Count == 0)
+            return;
+
+        float margin = cellSize * 0.75f;
+
+        for (int i = 0; i < boxes.Count; i++)
+        {
+            Op op = new Op();
+            op.type = OpFlatten;
+            op.c = boxes[i].center - transform.position;
+            op.half = boxes[i].half + new Vector2(margin, margin);
+            op.yaw = boxes[i].yaw;
+            op.p0 = boxes[i].baseY - transform.position.y - FlattenSink;
+            op.p1 = blend;
+
+            Commit(op, null);
+        }
+
+        if (backfillReach > 0f)
+        {
+            int step = Mathf.Max(1, backfillEvery);
+
+            for (int i = 0; i < boxes.Count; i += step)
+            {
+                Op op = new Op();
+                op.type = OpBackfill;
+                op.c = boxes[i].center - transform.position;
+                op.half = boxes[i].half + new Vector2(margin, margin + (step - 1) * 0.5f);
+                op.yaw = boxes[i].yaw;
+                op.p0 = boxes[i].baseY - transform.position.y - FlattenSink;
+                op.p1 = backfillReach;
+                op.p2 = Mathf.Max(backfillSlope, 0.1f);
+
+                Commit(op, null);
+            }
+        }
+
+        RebuildDirtyNow();
+    }
+
     // ---------- Schnittstelle fuer Generatoren (Doerfer) ----------
 
     // Liegt ein Punkt (mit Abstand "margin" zum Rand) innerhalb der Welt?
@@ -1390,6 +1641,14 @@ public class VoxelWorld : MonoBehaviour
 
         Commit(op, volumes);
 
+        // Ausgegrabenes Erz zaehlt gegen den Vorrat des Vorkommens (Loecher sind schon echt im Gelaende).
+        if (ore != null)
+        {
+            Vector3 l = worldCenter - transform.position;
+            ore.NotifyDug(l.x, l.y, l.z, BlockType.Coal, volumes[(int)BlockType.Coal]);
+            ore.NotifyDug(l.x, l.y, l.z, BlockType.Iron, volumes[(int)BlockType.Iron]);
+        }
+
         return volumes;
     }
 
@@ -1451,6 +1710,11 @@ public class VoxelWorld : MonoBehaviour
         {
             r = op.p0;
             pad = 1;
+        }
+        else if (op.type == OpRamp)
+        {
+            r = op.half.x + op.half.y + op.p1;
+            pad = 0;
         }
         else
         {
@@ -1523,9 +1787,151 @@ public class VoxelWorld : MonoBehaviour
             case OpBackfill:
                 ApplyBackfill(op, only, ref box, x0, x1, z0, z1, ref complete);
                 break;
+
+            case OpPit:
+                ApplyPit(op, only, ref box, x0, x1, z0, z1, ref complete);
+                break;
+
+            case OpRamp:
+                ApplyRamp(op, only, ref box, x0, x1, z0, z1, ref complete);
+                break;
         }
 
         return complete;
+    }
+
+    // Tagebau-Grube: Alles oberhalb der Abbauhoehe wird innerhalb der Ellipse abgetragen, am Rand weich als
+    // Boeschung. Es wird nur abgetragen (nichts aufgefuellt), die Materialien darunter bleiben (Stein, Kohle ...).
+    void ApplyPit(Op op, Column only, ref PointBox box,
+                  int x0, int x1, int z0, int z1, ref bool complete)
+    {
+        Quaternion inverse = Quaternion.Euler(0f, -op.yaw, 0f);
+
+        Vector3 c = op.c;
+        Vector2 half = op.half;
+        float baseY = op.p0;
+        float blend = Mathf.Max(op.p1, 0.01f);
+        float minHalf = Mathf.Max(0.5f, Mathf.Min(half.x, half.y));
+
+        // Ab 2 m unter der Abbauhoehe bis ganz nach oben (die Weltboden-Ebenen bleiben).
+        int y0 = Mathf.Max(2, Mathf.FloorToInt((baseY - 2f) / cellSize));
+        int y1 = PY - 1;
+
+        for (int z = z0; z <= z1; z++)
+        {
+            for (int x = x0; x <= x1; x++)
+            {
+                Column col = OpColumn(x, z, only, ref complete);
+
+                if (col == null)
+                    continue;
+
+                Vector3 off = inverse * new Vector3(x * cellSize - c.x, 0f, z * cellSize - c.z);
+
+                // Normierter Abstand zur Ellipse: 1 = Rand.
+                float e = Mathf.Sqrt((off.x * off.x) / Mathf.Max(0.01f, half.x * half.x) +
+                                     (off.z * off.z) / Mathf.Max(0.01f, half.y * half.y));
+
+                float t = 1f - Mathf.SmoothStep(0f, 1f, Mathf.Max(0f, e - 1f) * minHalf / blend);
+
+                if (t <= 0.001f)
+                    continue;
+
+                int b = ((z & Mask) * PY) * ChunkCells + (x & Mask);
+
+                for (int y = y0; y <= y1; y++)
+                {
+                    int index = b + y * ChunkCells;
+
+                    float plane = baseY - y * cellSize;   // + unter der Ebene, - darueber
+                    float old = col.d[index];
+
+                    if (plane >= old)
+                        continue;
+
+                    float now = Mathf.Lerp(old, plane, t);
+
+                    if (Mathf.Approximately(now, old))
+                        continue;
+
+                    col.d[index] = now;
+
+                    if (now <= 0f)
+                        col.m[index] = 0;
+
+                    box.Add(x, y, z);
+                }
+            }
+        }
+    }
+
+    // Rampe in die Grube: Eine Fahrspur, deren Boden von der Grubensohle nach aussen mit gleichmaessiger Steigung
+    // ansteigt, bis sie die Oberflaeche erreicht. Alles darueber wird abgetragen (seitlich als Boeschung).
+    void ApplyRamp(Op op, Column only, ref PointBox box,
+                   int x0, int x1, int z0, int z1, ref bool complete)
+    {
+        Quaternion inverse = Quaternion.Euler(0f, -op.yaw, 0f);
+
+        Vector3 c = op.c;
+        float s0 = c.y;
+        float reach = op.half.x;
+        float halfWidth = op.half.y;
+        float baseY = op.p0;
+        float blend = Mathf.Max(op.p1, 0.01f);
+        float gradient = op.p2;
+
+        int y0 = Mathf.Max(2, Mathf.FloorToInt((baseY - 2f) / cellSize));
+        int y1 = PY - 1;
+
+        for (int z = z0; z <= z1; z++)
+        {
+            for (int x = x0; x <= x1; x++)
+            {
+                Column col = OpColumn(x, z, only, ref complete);
+
+                if (col == null)
+                    continue;
+
+                Vector3 off = inverse * new Vector3(x * cellSize - c.x, 0f, z * cellSize - c.z);
+
+                if (off.x < 0f || off.x > reach)
+                    continue;
+
+                float lateral = Mathf.Max(0f, Mathf.Abs(off.z) - halfWidth);
+                float t = 1f - Mathf.SmoothStep(0f, 1f, lateral / blend);
+
+                if (t <= 0.001f)
+                    continue;
+
+                // Hoehe der Fahrbahn an dieser Stelle: unten flach, dann gleichmaessig ansteigend.
+                float level = baseY + gradient * Mathf.Max(0f, off.x - s0);
+
+                int b = ((z & Mask) * PY) * ChunkCells + (x & Mask);
+
+                for (int y = y0; y <= y1; y++)
+                {
+                    int index = b + y * ChunkCells;
+
+                    float plane = level - y * cellSize;
+                    float old = col.d[index];
+
+                    if (plane >= old)
+                        continue;
+
+                    float now = Mathf.Lerp(old, plane, t);
+
+                    if (Mathf.Approximately(now, old))
+                        continue;
+
+                    col.d[index] = now;
+
+                    if (now <= 0f)
+                        col.m[index] = 0;
+
+                    box.Add(x, y, z);
+                }
+            }
+        }
     }
 
     void ApplyDig(Op op, Column only, float[] volumes, ref PointBox box,
@@ -1638,10 +2044,16 @@ public class VoxelWorld : MonoBehaviour
                     // an der Oberflaeche sichtbar werden.
                     float grassLimit = grassDepthMeters + cellSize;
 
+                    // "lowered": Hier wurde die Oberflaeche abgetragen; die frisch freigelegte
+                    // oberste Schicht soll Gras sein (sonst blitzt braune Erde auf).
+                    bool lowered = old - now > 0.1f;
+
                     if (now > 0f &&
-                        (old <= 0f || (t > 0.5f && plane < grassDepthMeters)))
+                        (old <= 0f || (t > 0.5f && plane < grassDepthMeters) || (lowered && now < grassLimit)))
                     {
-                        col.m[index] = (byte)(plane < grassLimit
+                        bool shallow = (t > 0.5f || old <= 0f) ? plane < grassLimit : now < grassLimit;
+
+                        col.m[index] = (byte)(shallow
                             ? BlockType.Grass
                             : BlockType.Dirt);
                     }
@@ -1722,6 +2134,14 @@ public class VoxelWorld : MonoBehaviour
                     }
                     else
                     {
+                        // Frisch freigelegte Erde direkt unter der neuen Oberflaeche wird Gras.
+                        if (plane > 0f && plane < grassDepthMeters + cellSize && old > 0f &&
+                            col.m[index] == (byte)BlockType.Dirt)
+                        {
+                            col.m[index] = (byte)BlockType.Grass;
+                            box.Add(x, y, z);
+                        }
+
                         // Abtragen: nur ueber der Zielhoehe, darunter bleibt alles.
                         if (plane >= 0f || plane >= old)
                             continue;
@@ -1833,6 +2253,12 @@ public class VoxelWorld : MonoBehaviour
             w.Write(op.p1);
             w.Write(op.p2);
         }
+
+        // Abbau der Vorkommen (Dorfabbau und Spieler).
+        w.Write(ore != null);
+
+        if (ore != null)
+            ore.Write(w);
     }
 
     // Stellt die Welt aus dem Op-Log her: Alles wird verworfen und mit den gespeicherten
@@ -1861,11 +2287,23 @@ public class VoxelWorld : MonoBehaviour
             op.p1 = r.ReadSingle();
             op.p2 = r.ReadSingle();
 
-            if (op.type < OpDig || op.type > OpBackfill)
+            if (op.type < OpDig || op.type > OpRamp)
                 return false;
 
             list.Add(op);
         }
+
+        // Abbau der Vorkommen.
+        bool hasDeposits = r.ReadBoolean();
+
+        if (hasDeposits && ore != null)
+            ore.Read(r);
+        else if (hasDeposits)
+            OreDeposits.SkipState(r);
+        else if (ore != null)
+            ore.Clear();
+
+        lastPitCut.Clear();
 
         ResetTerrain(list);
 

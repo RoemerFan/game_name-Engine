@@ -30,7 +30,7 @@ public enum NetMode
 // am Router freigeben, oder ihr nutzt ein VPN (z. B. Tailscale, ZeroTier).
 public class NetSync : MonoBehaviour
 {
-    public const int ProtocolVersion = 4;
+    public const int ProtocolVersion = 8;
     public const int MaxPlayers = 4;
 
     // Nachrichtentypen
@@ -244,6 +244,10 @@ public class NetSync : MonoBehaviour
             if (mb.GetComponentInParent<SavedItem>() != null)
                 continue;
 
+            // Fahrzeuge entstehen und verschwinden im Spiel und haben eigene Nummern (TrainCar).
+            if (mb.GetComponentInParent<TrainCar>() != null)
+                continue;
+
             set.Add(mb.transform.root);
         }
 
@@ -304,6 +308,13 @@ public class NetSync : MonoBehaviour
     }
 
     // ---------- Beschreibungen fuer Kommandos ----------
+
+    // Nummer eines Objekts im Netz (Maschine oder Szenen-Objekt). 0 = keine.
+    public static int IdOf(Component c)
+    {
+        Transform root;
+        return c == null ? 0 : RootId(c, out root);
+    }
 
     public static bool DescribePort(Port port, out int id, out int index)
     {
@@ -381,6 +392,13 @@ public class NetSync : MonoBehaviour
 
     public static void Interact(IInteractable target)
     {
+        // Diese Bedienstellen schicken ihr Kommando selbst.
+        if (target is ISelfNetworked)
+        {
+            target.Interact();
+            return;
+        }
+
         Component comp = target as Component;
         Transform root = null;
         int id = comp != null ? RootId(comp, out root) : 0;
@@ -405,6 +423,15 @@ public class NetSync : MonoBehaviour
 
     public static void AddCoal(Boiler boiler)
     {
+        // Kessel einer Lok: ueber die Fahrzeug-Nummer.
+        TrainCar car = boiler.GetComponentInParent<TrainCar>();
+
+        if (car != null && car.NetId > 0)
+        {
+            Submit(NetCommand.LocoCoal(car.NetId));
+            return;
+        }
+
         Transform root;
         int id = RootId(boiler, out root);
 
@@ -412,6 +439,34 @@ public class NetSync : MonoBehaviour
             boiler.TryAddCoal();
         else
             Submit(NetCommand.AddCoal(id));
+    }
+
+    // Beschreibt, wo ein Bauteil in der Welt haengt (Nummer der Wurzel). false = nicht zuzuordnen.
+    public static bool DescribeRoot(Component c, out int id, out Transform root)
+    {
+        id = RootId(c, out root);
+        return id != 0;
+    }
+
+    // Bewegt ein Teleskop-Foerderband (Hebel). function: 0 = Neigung, 1 = Laenge.
+    public static void BoomDrive(TelescopicBelt belt, int function, float delta)
+    {
+        Transform root;
+        int id = RootId(belt, out root);
+        int index = id != 0 ? Array.IndexOf(root.GetComponentsInChildren<TelescopicBelt>(true), belt) : -1;
+
+        if (id == 0 || index < 0)
+        {
+            // Nicht zuzuordnen: nur lokal.
+            float sign = Mathf.Sign(delta);
+
+            if (function == 0) belt.DriveAngle(sign, Mathf.Abs(delta));
+            else belt.DriveExtension(sign, Mathf.Abs(delta));
+
+            return;
+        }
+
+        Submit(NetCommand.BoomDrive(id, index, function, delta));
     }
 
     public static void AddFuel(DieselGenerator generator, float liters)
@@ -598,6 +653,161 @@ public class NetSync : MonoBehaviour
 
                 if (generator != null)
                     generator.AddFuel(c.amount);
+
+                break;
+            }
+
+            case NetCommandType.TrackBuild:
+                if (TrackManager.Instance != null)
+                    TrackManager.Instance.ExecuteBuild(c.idA, c.position, c.idB, c.flatCenter,
+                        (c.index & 1) != 0 ? c.flatYaw : float.NaN,
+                        (c.index & 2) != 0 ? c.flatBase : float.NaN);
+
+                break;
+
+            case NetCommandType.SwitchSet:
+                if (TrackManager.Instance != null)
+                    TrackManager.Instance.ExecuteSwitch(c.idA, c.idB);
+
+                break;
+
+            case NetCommandType.TurntablePlace:
+                if (TrackManager.Instance != null)
+                    TrackManager.Instance.ExecuteTurntablePlace(c.position, c.flatYaw, c.idA, c.radius);
+
+                break;
+
+            case NetCommandType.TurntableRotate:
+                if (TrackManager.Instance != null)
+                    TrackManager.Instance.ExecuteTurntableRotate(c.idA, c.idB);
+
+                break;
+
+            case NetCommandType.TurntableRemove:
+                if (TrackManager.Instance != null)
+                    TrackManager.Instance.ExecuteTurntableRemove(c.idA);
+
+                break;
+
+            case NetCommandType.TrackRemove:
+                if (TrackManager.Instance != null)
+                    TrackManager.Instance.ExecuteRemoveEdge(c.idA);
+
+                break;
+
+            case NetCommandType.LocoSpawn:
+                if (TrackManager.Instance != null)
+                    TrackManager.Instance.ExecuteSpawnLoco(c.idA, c.amount, c.portA, c.index);
+
+                break;
+
+            case NetCommandType.HoseAction:
+                HoseReel.ExecuteAction(c.idA, c.portA, c.netId, c.idB, c.portB, c.position, c.sender);
+                break;
+
+            case NetCommandType.TrackShaft:
+                if (TrackManager.Instance != null)
+                    TrackManager.Instance.ExecuteShaft(c.idA, c.amount, c.radius);
+
+                break;
+
+            case NetCommandType.TrackShaftRemove:
+                if (TrackManager.Instance != null)
+                    TrackManager.Instance.ExecuteShaftRemove(c.idA, c.amount);
+
+                break;
+
+            case NetCommandType.Couple:
+                if (TrackManager.Instance != null)
+                    TrackManager.Instance.ExecuteCouple(c.idA, c.portA, c.idB, c.portB);
+
+                break;
+
+            case NetCommandType.Uncouple:
+                if (TrackManager.Instance != null)
+                    TrackManager.Instance.ExecuteUncouple(c.idA, c.portA);
+
+                break;
+
+            case NetCommandType.CarFunction:
+                if (TrackManager.Instance != null)
+                    TrackManager.Instance.ExecuteCarFunction(c.netId, c.index);
+
+                break;
+
+            case NetCommandType.LocoRemove:
+                if (TrackManager.Instance != null)
+                    TrackManager.Instance.ExecuteRemoveLoco(c.netId);
+
+                break;
+
+            case NetCommandType.LocoCoal:
+            {
+                TrainCar car = TrackManager.Instance != null ? TrackManager.Instance.FindCar(c.netId) : null;
+                Boiler boiler = car != null ? car.GetComponentInChildren<Boiler>(true) : null;
+
+                if (boiler != null)
+                    boiler.TryAddCoal();
+
+                break;
+            }
+
+            case NetCommandType.LocoFuel:
+            {
+                TrainCar car = TrackManager.Instance != null ? TrackManager.Instance.FindCar(c.netId) : null;
+                TrainTender tender = car != null ? car.GetComponentInChildren<TrainTender>(true) : null;
+
+                if (tender != null)
+                    tender.Add(c.amount);
+
+                break;
+            }
+
+            case NetCommandType.StoreAdd:
+            {
+                ItemStorage storage = ItemStorage.Resolve(c.portA, c.netId, c.idA);
+
+                if (storage != null)
+                {
+                    string[] parts = (c.prefab ?? "").Split('|');
+                    storage.ExecuteAdd(parts[0], (ItemKind)c.idB, parts.Length > 1 ? parts[1] : "", c.amount,
+                                       c.sender == LocalId);
+                }
+
+                break;
+            }
+
+            case NetCommandType.StoreTake:
+            {
+                ItemStorage storage = ItemStorage.Resolve(c.portA, c.netId, c.idA);
+
+                if (storage != null)
+                {
+                    GameObject spawned = storage.ExecuteTake(c.position, c.rotation, c.sender);
+
+                    // Wer es entnommen hat und selbst die Physik rechnet, bekommt den Gegenstand in die Hand.
+                    if (c.sender == LocalId)
+                        ItemStorage.lastTaken = spawned;
+                }
+
+                break;
+            }
+
+            case NetCommandType.BoomDrive:
+            {
+                Transform root = ResolveRoot(c.netId);
+                TelescopicBelt[] belts = root != null ? root.GetComponentsInChildren<TelescopicBelt>(true) : null;
+
+                if (belts != null && c.idA >= 0 && c.idA < belts.Length)
+                {
+                    float sign = Mathf.Sign(c.amount);
+                    float time = Mathf.Abs(c.amount);
+
+                    if (c.portA == 0)
+                        belts[c.idA].DriveAngle(sign, time);
+                    else
+                        belts[c.idA].DriveExtension(sign, time);
+                }
 
                 break;
             }
@@ -987,6 +1197,11 @@ public class NetSync : MonoBehaviour
                 // Lose Gegenstaende (siehe NetItems.cs).
                 NetItems.HandleHost(peer.id, type, payload);
             }
+            else if (TrainNet.IsTrainMessage(type))
+            {
+                // Eingaben der Mitspieler fuer Loks (siehe TrainNet.cs).
+                TrainNet.HandleHost(peer.id, type, payload);
+            }
         }
         catch (Exception e)
         {
@@ -1315,6 +1530,8 @@ public class NetSync : MonoBehaviour
                 // Lose Gegenstaende (siehe NetItems.cs); vor dem Laden werden sie gesammelt.
                 if (NetItems.IsItemMessage(type))
                     NetItems.HandleClient(type, payload, ready);
+                else if (TrainNet.IsTrainMessage(type) && ready)
+                    TrainNet.HandleClient(type, payload);
 
                 break;
         }

@@ -10,8 +10,16 @@ using UnityEngine;
 //   - Ablass:      "Drain Per Second" > 0 laesst Inhalt ins Freie ab
 // Alle Funktionen sind frei kombinierbar.
 //
+// WELLEN-MODUS: Sind die Ports Wellen-Ports (Medium "Shaft"), wird das Geraet ein Zwischenstueck fuer Wellen:
+//   - Winkelgetriebe / Knickstueck: die Welle aendert hier ihre Richtung (Port A zeigt in eine Richtung,
+//     Port B in eine andere), optional mit Uebersetzung und Wirkungsgrad
+//   - Verteiler: Port A ist der Eingang, alle weiteren Wellen-Ports drehen starr mit (T-Stueck)
+//   - Kupplung: MachineSwitch dazu, AUS = beide Seiten getrennt
+//   - Sicherung: "Shaft Rated Torque Nm" > 0 = bei Dauerueberlast geht es kaputt (Schalter faellt auf AUS)
+// Der Port-Winkel entscheidet, wie die Welle verlaeuft; die Welle selbst bleibt immer gerade.
+//
 // Wichtig: Alle Ports eines Geraets muessen denselben Stoff haben.
-public class InlineDevice : MonoBehaviour, IPortOwner, ISaveable
+public class InlineDevice : MonoBehaviour, IPortOwner, ISaveable, IShaftLink
 {
     [Header("Allgemein")]
     [SerializeField] private string label = "@inline.label";
@@ -44,6 +52,30 @@ public class InlineDevice : MonoBehaviour, IPortOwner, ISaveable
              "Play On Awake am Partikelsystem ausschalten.")]
     [SerializeField] private ParticleSystem drainEffect;
 
+    [Header("Wellen-Modus (nur bei Wellen-Ports)")]
+    [Tooltip("Drehzahl der Seite B (alle Ports ausser dem ersten) geteilt durch die von Seite A (erster Port).")]
+    [SerializeField] private float shaftRatio = 1f;
+
+    [Range(0.5f, 1f)]
+    [Tooltip("Wirkungsgrad (1 = verlustfrei).")]
+    [SerializeField] private float shaftEfficiency = 0.98f;
+
+    [Tooltip("Dauerhaft zulaessiges Drehmoment (Nm). 0 = keine Grenze. Darueber geht das Stueck nach einiger Zeit kaputt.")]
+    [SerializeField] private float shaftRatedTorqueNm = 0f;
+
+    [SerializeField] private float shaftTripSecondsAtDouble = 3f;
+    [SerializeField] private float shaftCoolSeconds = 12f;
+    [SerializeField] private float shaftInertiaA = 0.5f;
+    [SerializeField] private float shaftInertiaB = 0.5f;
+
+    [Tooltip("Optional: Drehende Teile (Zahnrad o. ae.) auf Seite A und B.")]
+    [SerializeField] private Transform rotorA;
+    [SerializeField] private Transform rotorB;
+    [Tooltip("Drehachse im Raum des jeweiligen Rotors (bei Winkelgetriebe verschieden!).")]
+    [SerializeField] private Vector3 rotorAxisA = Vector3.right;
+    [SerializeField] private Vector3 rotorAxisB = Vector3.forward;
+    [SerializeField] private float rotorVisualFactor = 0.05f;
+
     [Header("Debug-Anzeige")]
     [SerializeField] private bool showDebugInfo = true;
     [SerializeField] private float debugDistance = 8f;
@@ -73,6 +105,142 @@ public class InlineDevice : MonoBehaviour, IPortOwner, ISaveable
 
     // Ventil ist offen, wenn es keinen Schalter gibt oder er an ist.
     public bool IsOpen => machineSwitch == null || machineSwitch.IsOn;
+
+    // ---------- Wellen-Modus ----------
+
+    private bool shaftMode;
+    private readonly ShaftPart sideA = new ShaftPart();
+    private readonly ShaftPart sideB = new ShaftPart();
+    private RotorSpin spinA;
+    private RotorSpin spinB;
+    private bool lastEngaged = true;
+    private float shaftHeat;
+    private bool shaftBroken;
+    private float shaftTransmitted;
+
+    public bool Engaged
+    {
+        get { return !shaftBroken && (machineSwitch == null || machineSwitch.IsOn); }
+    }
+
+    public IShaftDevice SideA { get { return sideA; } }
+    public IShaftDevice SideB { get { return sideB; } }
+    public float Ratio { get { return Mathf.Max(0.01f, shaftRatio); } }
+    public float Efficiency { get { return shaftEfficiency; } }
+
+    public void ReportTorque(float nm)
+    {
+        shaftTransmitted = nm;
+    }
+
+    private void SetupShaft()
+    {
+        System.Collections.Generic.List<Port> b = new System.Collections.Generic.List<Port>();
+        Port first = null;
+
+        foreach (Port p in ports)
+        {
+            if (p.RawMedium != PortMedium.Shaft)
+                continue;
+
+            if (first == null)
+                first = p;
+            else
+                b.Add(p);
+        }
+
+        sideA.Ports = first != null ? new[] { first } : new Port[0];
+        sideB.Ports = b.ToArray();
+        sideA.Inertia = shaftInertiaA;
+        sideB.Inertia = shaftInertiaB;
+        sideA.Tick = (rpm, dt) => Spin(ref spinA, rotorA, rotorAxisA, rpm, dt);
+        sideB.Tick = (rpm, dt) => Spin(ref spinB, rotorB, rotorAxisB, rpm, dt);
+
+        // Mit Ueberlastschutz braucht das Stueck einen Schalter zum Zuruecksetzen.
+        if (machineSwitch == null && shaftRatedTorqueNm > 0f)
+        {
+            machineSwitch = gameObject.AddComponent<MachineSwitch>();
+            machineSwitch.Label = "@shaftgear.label";
+        }
+
+        if (first == null || b.Count == 0)
+            Debug.LogWarning("InlineDevice (Welle): Es werden mindestens zwei Wellen-Ports gebraucht!", this);
+    }
+
+    private void Spin(ref RotorSpin spin, Transform rotor, Vector3 axis, float rpm, float dt)
+    {
+        if (rotor == null)
+            return;
+
+        if (spin == null)
+            spin = new RotorSpin(rotor, axis);
+
+        spin.Rotate(rpm * 6f * rotorVisualFactor * dt);
+    }
+
+    private void OnEnable()
+    {
+        if (!shaftMode)
+            return;
+
+        lastEngaged = Engaged;
+
+        if (machineSwitch != null)
+            machineSwitch.Changed += OnShaftSwitchChanged;
+
+        ShaftGrid.Register(sideA, this);
+        ShaftGrid.Register(sideB, this);
+        ShaftGrid.RegisterLink(this, this);
+    }
+
+    private void OnDisable()
+    {
+        if (!shaftMode)
+            return;
+
+        if (machineSwitch != null)
+            machineSwitch.Changed -= OnShaftSwitchChanged;
+
+        ShaftGrid.Unregister(sideA);
+        ShaftGrid.Unregister(sideB);
+        ShaftGrid.UnregisterLink(this);
+    }
+
+    private void OnShaftSwitchChanged(bool on)
+    {
+        if (on)
+            shaftBroken = false;
+    }
+
+    private void ShaftUpdate(float dt)
+    {
+        if (Engaged)
+        {
+            shaftHeat = Overload.Step(shaftHeat, shaftTransmitted, shaftRatedTorqueNm,
+                shaftTripSecondsAtDouble, shaftCoolSeconds, dt);
+
+            if (shaftHeat >= 1f)
+            {
+                shaftBroken = true;
+                shaftHeat = 1f;
+
+                if (machineSwitch != null)
+                    machineSwitch.SetOn(false);
+
+                Debug.LogWarning("Wellen-Zwischenstueck ueberlastet: " + name + ". Zum Zuruecksetzen den Schalter einschalten.");
+            }
+        }
+        else
+        {
+            shaftHeat = Mathf.Max(0f, shaftHeat - dt / Mathf.Max(0.01f, shaftCoolSeconds));
+        }
+
+        if (Engaged != lastEngaged)
+        {
+            lastEngaged = Engaged;
+            ShaftGrid.Invalidate();
+        }
+    }
 
     private void Awake()
     {
@@ -111,6 +279,22 @@ public class InlineDevice : MonoBehaviour, IPortOwner, ISaveable
         if (machineSwitch == null)
             machineSwitch = GetComponentInChildren<MachineSwitch>();
 
+        // Wellen-Modus, sobald mindestens ein Port ein Wellen-Port ist.
+        foreach (Port port in ports)
+        {
+            if (port.RawMedium == PortMedium.Shaft)
+            {
+                shaftMode = true;
+                break;
+            }
+        }
+
+        if (shaftMode)
+        {
+            medium = PortMedium.Shaft;
+            SetupShaft();
+        }
+
         // Abfluss-Effekt anfangs aus.
         if (drainEffect != null)
             drainEffect.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
@@ -118,6 +302,12 @@ public class InlineDevice : MonoBehaviour, IPortOwner, ISaveable
 
     private void Update()
     {
+        if (shaftMode)
+        {
+            ShaftUpdate(Time.deltaTime);
+            return;
+        }
+
         // Ablassen: Ein Teil des Inhalts laeuft pro Sekunde ins Freie.
         if (drainPerSecond > 0f && IsOpen && buffer > 0f)
         {
@@ -138,7 +328,7 @@ public class InlineDevice : MonoBehaviour, IPortOwner, ISaveable
     {
         float dt = Time.deltaTime;
 
-        if (dt <= 0f)
+        if (dt <= 0f || shaftMode)
             return;
 
         // Durchfluss dieses Bildes in "pro Sekunde" umrechnen und glaetten,
@@ -271,6 +461,7 @@ public class InlineDevice : MonoBehaviour, IPortOwner, ISaveable
             case PortMedium.Water: return Loc.T("medium.water");
             case PortMedium.Steam: return Loc.T("medium.steam");
             case PortMedium.Soot: return Loc.T("medium.soot");
+            case PortMedium.Shaft: return Loc.T("medium.shaft");
             default: return Loc.T("medium.power");
         }
     }
@@ -280,7 +471,10 @@ public class InlineDevice : MonoBehaviour, IPortOwner, ISaveable
         if (!showDebugInfo)
             return;
 
-        Camera cam = Camera.main;
+        Camera cam = TrackManager.Instance != null ? TrackManager.Instance.PlayerCamera : null;
+
+        if (cam == null)
+            cam = Camera.main;
 
         if (cam == null && Camera.allCamerasCount > 0)
             cam = Camera.allCameras[0];
@@ -303,6 +497,21 @@ public class InlineDevice : MonoBehaviour, IPortOwner, ISaveable
         if (screen.z <= 0f)
             return;
 
+        if (shaftMode)
+        {
+            string limit = shaftRatedTorqueNm > 0f ? shaftRatedTorqueNm.ToString("F0") : "-";
+            string t = Loc.T("inline.info.shaft", Loc.Resolve(label), Ratio.ToString("0.##"),
+                sideA.Rpm.ToString("F0"), sideB.Rpm.ToString("F0"), shaftTransmitted.ToString("F0"), limit);
+
+            if (shaftBroken)
+                t = Loc.T("shaftgear.broken") + "\n" + t;
+            else if (!Engaged)
+                t = Loc.T("shaftclutch.disengaged") + "\n" + t;
+
+            GameSettings.DrawBoxAbove(screen, t);
+            return;
+        }
+
         string status =
             !IsOpen ? Loc.T("inline.status.closed")
             : openFraction < 0.99f
@@ -324,11 +533,15 @@ public class InlineDevice : MonoBehaviour, IPortOwner, ISaveable
     {
         bag.SetFloat("buffer", buffer);
         bag.SetFloat("total", total);
+        bag.SetFloat("rpmA", sideA.Rpm);
+        bag.SetFloat("rpmB", sideB.Rpm);
     }
 
     public void LoadState(StateBag bag)
     {
         buffer = Mathf.Clamp(bag.GetFloat("buffer", buffer), 0f, bufferCapacity);
         total = Mathf.Max(0f, bag.GetFloat("total", total));
+        sideA.Rpm = Mathf.Max(0f, bag.GetFloat("rpmA", sideA.Rpm));
+        sideB.Rpm = Mathf.Max(0f, bag.GetFloat("rpmB", sideB.Rpm));
     }
 }

@@ -101,6 +101,7 @@ public class Wheelbarrow : MonoBehaviour
     private Vector3 lastWheelPos;
 
     private float cargoMass;
+    private ItemStorage storage;   // optional: Lager fuer die Ladung
     private float nextCargoCheck;
 
     private static readonly Collider[] overlapBuffer = new Collider[64];
@@ -212,7 +213,10 @@ public class Wheelbarrow : MonoBehaviour
         body.angularVelocity = Vector3.zero;
         body.useGravity = false;
         body.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
-        body.interpolation = RigidbodyInterpolation.Interpolate;
+
+        // Ohne Interpolation: Die Karre wird jedes Bild direkt gesetzt (PushUpdate), genau
+        // im Takt mit dem Spieler. Mit Interpolation hinkte sie ihm leicht hinterher (Ruckeln).
+        body.interpolation = RigidbodyInterpolation.None;
         body.isKinematic = true;
 
         targetPos = body.position;
@@ -238,6 +242,7 @@ public class Wheelbarrow : MonoBehaviour
 
         body.isKinematic = false;
         body.useGravity = true;
+        body.interpolation = RigidbodyInterpolation.Interpolate;
         body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         body.velocity = Vector3.zero;
         body.angularVelocity = Vector3.zero;
@@ -306,7 +311,14 @@ public class Wheelbarrow : MonoBehaviour
         targetRot = rot;
         targetPos = handleWorld - rot * handleLocal;
 
-        return ResolveWalls();
+        Vector3 pushBack = ResolveWalls();
+
+        // Sofort an die Zielpose setzen (jedes Bild), damit sie genau zum Spieler passt.
+        body.position = targetPos;
+        body.rotation = targetRot;
+        transform.SetPositionAndRotation(targetPos, targetRot);
+
+        return pushBack;
     }
 
     // Prueft, ob die Karre an der Zielposition in einer Wand steckt, schiebt sie heraus
@@ -440,6 +452,13 @@ public class Wheelbarrow : MonoBehaviour
     private void UpdateCargo()
     {
         cargoMass = 0f;
+
+        // Gelagerte Stuecke (siehe ItemStorage) zaehlen als Ladung.
+        if (storage == null)
+            storage = GetComponent<ItemStorage>();
+
+        if (storage != null)
+            cargoMass += storage.StoredMassKg;
 
         if (cargoZone == null)
             return;

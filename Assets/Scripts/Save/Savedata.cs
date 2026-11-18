@@ -171,6 +171,12 @@ public class SaveFileData
     public Vector3 playerPosition;
     public float playerYaw;
 
+    // Geld des Spielers und Zustand der Doerfer (Lager, Ansehen). Fehlt in aelteren Spielstaenden.
+    public StateBag economy = new StateBag();
+
+    // Gleisnetz und Lokomotiven (siehe TrackManager).
+    public StateBag tracks = new StateBag();
+
     public List<MachineRecord> machines = new List<MachineRecord>();
     public List<PipeRecord> pipes = new List<PipeRecord>();
     public List<ItemRecord> items = new List<ItemRecord>();

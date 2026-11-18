@@ -29,6 +29,9 @@ public class CoalPickup : MonoBehaviour
     [Tooltip("Kleiner Abstand zur Flaeche beim Ablegen (Meter), damit nichts im Boden steckt.")]
     [SerializeField] private float placeClearance = 0.02f;
 
+    // Was der lokale Spieler gerade in der Hand haelt (z. B. ein Werkzeug fuer den VoxelDigger), sonst null.
+    public static CollectibleCoal LocalHeldItem { get; private set; }
+
     private GameObject heldCoal;
     private CollectibleCoal heldItem;   // enthaelt die Einstellungen fuer Haltewinkel und -position
     private Rigidbody heldRigidbody;
@@ -37,6 +40,10 @@ public class CoalPickup : MonoBehaviour
     // Mehrspieler: Auf die Bestaetigung des Hosts warten, dass wir den Gegenstand tragen duerfen.
     private NetItem pendingGrab;
     private float pendingTimer;
+
+    // Mitspieler: aus einem Lager genommen, das Stueck kommt vom Host direkt in die Hand.
+    private bool waitingTake;
+    private float takeTimer;
 
     private void Update()
     {
@@ -56,6 +63,22 @@ public class CoalPickup : MonoBehaviour
             else if (pendingTimer <= 0f)
             {
                 pendingGrab = null; // abgelehnt oder zu lange gewartet
+            }
+        }
+
+        if (waitingTake)
+        {
+            takeTimer -= Time.deltaTime;
+            NetItem given = heldCoal == null ? NetItems.HeldByMeItem() : null;
+
+            if (given != null)
+            {
+                BeginHold(given.GetComponent<CollectibleCoal>());
+                waitingTake = false;
+            }
+            else if (takeTimer <= 0f || heldCoal != null)
+            {
+                waitingTake = false;
             }
         }
 
@@ -79,7 +102,7 @@ public class CoalPickup : MonoBehaviour
 
         if (heldCoal == null)
         {
-            if (pendingGrab == null)
+            if (pendingGrab == null && !waitingTake)
                 TryPickupCoal();
         }
         else
@@ -141,6 +164,33 @@ public class CoalPickup : MonoBehaviour
         CollectibleCoal coal =
             hit.collider.GetComponentInParent<CollectibleCoal>();
 
+        // Kein loser Gegenstand getroffen: Vielleicht ein Lager (Schubkarre, Tender)?
+        // Dann kommt das oberste Stueck direkt in die Hand.
+        if (coal == null)
+        {
+            ItemStorage storage = hit.collider.GetComponentInParent<ItemStorage>();
+
+            if (storage == null || !storage.AcceptsTakeOut(hit.collider))
+                return;
+
+            Transform cam = playerCamera.transform;
+            GameObject spawned = storage.TakeOut(HoldPosition(cam, null), cam.rotation);
+
+            if (spawned == null)
+            {
+                // Mitspieler: Der Host erzeugt das Stueck und gibt es uns in die Hand.
+                if (NetSync.IsClient && storage.Count > 0)
+                {
+                    waitingTake = true;
+                    takeTimer = 1.5f;
+                }
+
+                return;
+            }
+
+            coal = spawned.GetComponent<CollectibleCoal>();
+        }
+
         if (coal == null)
             return;
 
@@ -180,6 +230,7 @@ public class CoalPickup : MonoBehaviour
 
         heldCoal = coal.gameObject;
         heldItem = coal;
+        LocalHeldItem = coal;
         heldRigidbody = rb;
 
         // Erst Bewegung stoppen, dann kinematisch machen.
@@ -215,6 +266,7 @@ public class CoalPickup : MonoBehaviour
 
         heldCoal = null;
         heldItem = null;
+        LocalHeldItem = null;
         heldRigidbody = null;
         heldColliders = null;
 

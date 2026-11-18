@@ -120,6 +120,7 @@ build.tools=WERKZEUGE
 build.machines=MASCHINEN
 build.demolish=Abreißen
 build.move=Umplatzieren
+build.track=Gleisbau
 build.hint.demolish=ABRISS-MODUS   [<primary>] Maschine abreißen   [<secondary>] beenden
 build.hint.moveselect=UMPLATZIEREN   [<primary>] Maschine aufnehmen   [<secondary>] beenden
 build.hint.movecarry=UMPLATZIEREN   [<primary>] absetzen   [<rotl>/<rotr>] drehen   [<secondary>] abbrechen\nAngeschlossene Leitungen werden beim Absetzen entfernt.
@@ -297,3 +298,198 @@ port.cable.small=dünnes Kabel
 cart.grab=Schubkarre greifen
 cart.release=Schubkarre loslassen
 cart.load=Ladung: {0} / {1} kg
+
+# Eisenbahn
+track.hint.start=Linksklick: Startpunkt setzen (freies Gleisende rastet ein, mitten auf einem Gleis = Weiche)
+track.hint.end=Linksklick: Gleis bis hierher bauen
+track.hint=GLEISBAU   [{0}] Lok aufs Gleis   [{1}] Gleis/Lok entfernen   [{3}] Parallelgleis/Weiche   [<secondary>] abbrechen   [{2}] beenden
+track.err.steep=Zu steil (höchstens 8 %)
+track.err.curve=Kurve zu eng
+track.err.short=Stück zu kurz
+track.err.long=Stück zu lang (höchstens 60 m)
+track.err.node=Hier kann nicht angeschlossen werden
+track.err.occupied=Hier ist schon ein Gleis im Weg
+track.err.stem=Erst die Abzweige dieser Weiche entfernen
+track.hint.parallel.start=Linksklick: Gleis anklicken (Start des Parallelgleises, Seite = Zielrichtung)   ·   oder ein freies Ende eines Parallelgleises (gelb) anklicken, um daran weiterzubauen
+track.hint.parallel.end=Linksklick: Ende des Parallelgleises auf demselben Gleis
+track.hint.parallel=PARALLELGLEIS   [{0}] zurueck zum Gleisbau   [{1}] mit Weiche: {2}   [<secondary>] abbrechen
+track.parallel.on=an
+track.parallel.off=aus
+track.err.join=Hier kann keine Weiche entstehen (zu nah am Gleisende oder ein Fahrzeug steht darauf)
+track.err.parallelShort=Zu kurz fuer eine Weiche: das Parallelgleis weiter nach vorne ziehen
+track.err.parallelEdge=Das Ende muss auf demselben oder dem angrenzenden Gleisstueck liegen
+track.switch.prompt=Weiche umlegen (steht auf {0})
+track.switch.straight=geradeaus
+track.switch.left=links
+track.switch.right=rechts
+track.err.cars=Auf dem Gleis steht noch ein Fahrzeug
+track.err.noTrack=Kein Gleis in der Nähe
+track.removed=Entfernt
+train.dir.fwd=Vorwärts
+train.dir.back=Rückwärts
+train.hud=Regler: {0} %   ·   Richtung: {1}   ·   Tempo: {2} km/h
+train.hint=Regler [{0}]/[{1}]   ·   Richtung [{2}]   ·   Bremse [{3}]   ·   Pfeife [{4}]
+train.hud2=Druck: {0} %   ·   Wasser: {1} %   ·   Kohle im Feuer: {2}
+track.err.noManager=Kein TrackManager in der Szene (Skript an ein leeres GameObject hängen)
+
+# Teleskop-Foerderband
+boom.prompt.angle=Neigung: {0}°   ·   [<primary>] halten = hoch   ·   [<secondary>] halten = runter
+boom.prompt.extend=Länge: +{0} m   ·   [<primary>] halten = ausfahren   ·   [<secondary>] halten = einfahren
+
+# Lok-Typen, Antriebe, Tender
+track.loco.select=Fahrzeug: {0}   [{1}] wechseln
+train.engine.on=läuft
+train.engine.off=aus
+train.diesel.status=Dieselmotor: {0}
+train.electric.status=Elektromotor: {0}
+train.tender.coal=Tender: {0} / {1} Kohlestücke
+train.tender.diesel=Dieseltank: {0} l ({1} %)
+train.tender.electric=Batterie: {0} kWh ({1} %)
+keys.page=Tastenbelegung
+keys.col.function=Funktion
+keys.col.keyboard=Tastatur
+keys.col.mouse=Maus
+keys.col.pad=Controller
+keys.note=Feld anklicken und die gewünschte Taste, Maustaste oder den Controller-Knopf drücken. Esc = abbrechen, Rück/Entf = frei lassen, × = Zeile auf Standard. * = geändert, rot = doppelt belegt. Die Standardbelegung dient nur als Vorschlag.
+keys.g.move=Bewegung
+keys.g.items=Gegenstände und Bedienen
+keys.g.build=Bauen
+keys.g.pipes=Rohre und Kabel
+keys.g.track=Eisenbahn: Gleise
+keys.g.train=Eisenbahn: Lok fahren
+keys.g.misc=Sonstiges
+keys.f.walk=Laufen
+keys.f.look=Umsehen
+keys.f.jump=Springen
+keys.f.climb=Leiter hoch/runter
+keys.f.interact=Bedienen (Schalter, Hebel, Weiche, Drehscheibe)
+keys.f.pickup=Aufheben
+keys.f.place=Ablegen / Hinstellen
+keys.f.release=Loslassen
+keys.f.primary=Hauptaktion (Bauen, Klicken)
+keys.f.secondary=Zweitaktion (Abreißen, Abbrechen)
+keys.f.buildmenu=Baumenü
+keys.f.rotate=Drehen
+keys.f.grid=Bau-Raster ein/aus
+keys.f.gridanchor=Raster an Maschine ausrichten
+keys.f.backfill=Erde auffüllen
+keys.f.pipemode=Rohrmodus
+keys.f.trackmode=Gleis-Werkzeug
+keys.f.trackclick=Gleispunkt setzen
+keys.f.parallel=Parallelgleis-Modus
+keys.f.parallelswitch=Parallel mit/ohne Weiche
+keys.f.locoplace=Lok aufs Gleis setzen
+keys.f.locotype=Loktyp wechseln
+keys.f.switch=Weiche umlegen
+keys.f.boom=Teleskopband steuern
+keys.f.throttle=Fahrhebel (mehr/weniger)
+keys.f.reverser=Fahrtrichtung
+keys.f.brake=Bremse
+keys.f.horn=Pfeife
+keys.f.monitor=Anzeige umschalten
+keys.f.pause=Pause / Menü
+keys.f.quicksave=Schnell speichern
+keys.f.timeskip=Zeit überspringen
+keys.f.menuconfirm=Menü bestätigen
+keys.pad.leftstick=Linker Stick
+keys.pad.rightstick=Rechter Stick
+keys.mouse.move=Mausbewegung
+keys.key.space=Leertaste
+keys.f.remove=Entfernen (Rohr, Gleis, Lok)
+keys.pad.buildmenu=über das Baumenü
+track.hint.tt=[{0}] Drehscheibe aufstellen   ·   Am Pfosten neben einem Ausgang [{1}]: Brücke dorthin drehen
+track.hint.tt.place=DREHSCHEIBE   [<primary>] hier aufstellen (Ausgang 1 zeigt in Blickrichtung)   [{0}] zurück   [<secondary>] abbrechen
+track.tt.prompt=Brücke auf Ausgang {0} drehen
+track.tt.here=Die Brücke steht schon an diesem Ausgang
+track.tt.moving=Die Brücke dreht sich …
+track.err.bridge=Die Brücke gehört zur Drehscheibe (Drehscheibe in der Mitte entfernen)
+track.err.ttBusy=Erst alle Gleise an der Drehscheibe entfernen
+track.err.ttCars=Auf der Brücke steht ein Fahrzeug
+track.err.ttMoving=Die Brücke dreht sich noch
+keys.f.turntable=Drehscheibe aufstellen
+input.mouse.middle=Mittelklick
+keys.listen=Taste drücken …
+keys.reset=Alle auf Standard zurücksetzen
+keys.see=siehe unten
+keys.f.forward=Vorwärts laufen / Leiter hoch
+keys.f.back=Rückwärts laufen / Leiter runter
+keys.f.left=Nach links laufen
+keys.f.right=Nach rechts laufen
+keys.f.rotateleft=Drehen links
+keys.f.rotateright=Drehen rechts
+keys.f.throttleup=Lok: mehr Gas
+keys.f.throttledown=Lok: weniger Gas
+keys.f.quickload=Schnell laden
+track.err.parallelDir=Von einem Gleisende aus nur in dessen Richtung weiterbauen
+track.err.ttNear=Ein Fahrzeug steht zu nah an der Brücke – es muss ganz auf die Brücke oder weit davon weg
+car.coupler.couple=Kuppeln
+car.coupler.uncouple=Abkuppeln
+car.coupler.none=Kupplung (kein Fahrzeug in Reichweite)
+wagon.hatch.open=Bodenklappe öffnen
+wagon.hatch.close=Bodenklappe schließen
+track.err.shaftBridge=Auf einer Drehscheibenbrücke ist kein Schacht möglich
+track.err.shaftEdge=Hier ist kein Platz für den Schacht – das Gleisstück ist zu kurz oder die Stelle liegt zu nah am Ende
+track.err.shaftOverlap=Hier ist schon ein Schacht
+track.hint.shaft=ENTLADESCHACHT   [<primary>] Schacht ins Gleis bauen   [{1}] Schacht entfernen   [{0}] zurück   [<secondary>] abbrechen
+keys.f.shaft=Entladeschacht-Werkzeug
+train.mass=Zug: {0} t, Beschleunigung {1} %
+train.tender.water=Wasser: {0} / {1}
+hose.pickup=Schlauchdüse nehmen
+hose.unplug=Schlauch abziehen
+hose.carry.plug=SCHLAUCH   [{0}] anschließen
+hose.carry.drop=SCHLAUCH   [{0}] ablegen
+medium.shaft=Welle
+pipe.port.shaft={0} ({1}) - {2} U/min
+shaftengine.status.off=AUS
+shaftengine.status.nosteam=Kein Dampf!
+shaftengine.status.running=Läuft
+shaftengine.status.stopped=Steht
+shaftengine.info=Dampfmaschine: {0}\nDampf: {1}/{2}\nDrehzahl: {3} U/min\nLeistung: {4} / {5} kW\nRegler: {6} %
+shaftgen.status.decoupled=AUS (abgekoppelt)
+shaftgen.status.running=Läuft
+shaftgen.status.slow=Zu langsam!
+shaftgen.status.stopped=Steht
+shaftgen.info=Wellengenerator: {0}\nDrehzahl: {1} U/min ({2} Hz)\nLeistung: {3} / {4} kW\nAngefordert: {5} kW
+lever.throttle=Regler: {0} %   ·   [<primary>] halten = hoch   ·   [<secondary>] halten = runter
+lever.reverser=Fahrtrichtung: {0}   ·   [<primary>] = umlegen (nur im Stand)
+lever.brake=Bremse   ·   [<primary>] halten = bremsen
+lever.horn=Pfeife   ·   [<primary>] = ziehen
+shaftclutch.info=Kupplung: {0}\nSeite A: {1} U/min\nSeite B: {2} U/min\nMoment: {3} / {4} Nm
+shaftclutch.engaged=Eingekuppelt
+shaftclutch.disengaged=Ausgekuppelt
+shaftgear.info=Getriebe, Übersetzung {0}\nEingang: {1} U/min\nAusgang: {2} U/min\nMoment: {3} / {4} Nm
+shaftclutch.slipping=Rutscht
+shaftgear.broken=DEFEKT (Überlast)! Zum Zurücksetzen Schalter einschalten
+shaftgear.label=Getriebe
+inline.info.shaft={0}\nÜbersetzung {1}\nSeite A: {2} U/min\nSeite B: {3} U/min\nMoment: {4} / {5} Nm
+
+# ---------- Warenannahme ----------
+machine.GoodsReceiver=Warenannahme
+receiver.nomarket=Warenannahme\nKein Abnehmer in Reichweite (Dorf zu weit weg)
+receiver.market=Warenannahme\nAbnehmer: {0}
+receiver.price={0}: {1} pro Stück
+receiver.sold=Verkauft: {0} für {1}
+receiver.total=Eingenommen: {0}
+good.Coal=Kohle
+good.IronOre=Eisenerz
+good.IronIngots=Eisenbarren
+good.Wood=Holz
+good.Food=Lebensmittel
+good.Tools=Werkzeug
+
+# ---------- Lokschuppen ----------
+machine.LocoShed=Lokschuppen
+shed.info=Lokschuppen\nWasser: {0} / {1}\nDiesel: {2} / {3}\nLoks im Schuppen: {4}
+shed.serving=Lok wird versorgt…
+
+# ---------- Mine / Verladestation ----------
+mine.prompt={0}x {1} kaufen ({2})
+mine.title=Mine {0}\nWare: {1}
+mine.stock=Lager: {0} / {1}
+mine.deposit=Vorkommen: {0} von {1} m³ übrig\nGrubentiefe: {2} m
+mine.exhausted=Vorkommen erschöpft
+mine.nostock=Zu wenig im Lager
+mine.nomoney=Nicht genug Geld
+mine.nodigger=Kein Spieler-Greifer gefunden
+mine.noprefab=Kein Prefab für Kohle/Erz am Digger eingetragen
+mine.bought={0}x {1} gekauft
